@@ -45,6 +45,21 @@ struct Sensor : TemperaturePort {
     }
     void cancel() override {}
 };
+struct Network : NetworkPort {
+    std::uint32_t now = 0;
+    unsigned starts = 0;
+    unsigned disconnects = 0;
+    NetworkLink link = NetworkLink::Disconnected;
+    bool begin() override { ++starts; link = NetworkLink::Connecting; return true; }
+    NetworkLink status() override {
+        if (starts && now >= 10 && now < 5000) return NetworkLink::Connected;
+        if (now >= 5000 && now < 10000) return NetworkLink::Disconnected;
+        if (starts >= 2 && now >= 10010) return NetworkLink::Connected;
+        return link;
+    }
+    std::string address() override { return "192.168.1.20"; }
+    void disconnect() override { ++disconnects; link = NetworkLink::Disconnected; }
+};
 struct Infrared : InfraredPort {
     std::uint32_t now = 0;
     unsigned frames = 0;
@@ -87,6 +102,8 @@ int main() {
     Diagnostics diagnostics;
     Sensor sensor;
     TemperatureService temperature(sensor);
+    Network networkPort;
+    NetworkService network(networkPort);
     Infrared infraredPort;
     InfraredBinding toggle;
     toggle.protocol = 7; toggle.address = 42; toggle.command = 9;
@@ -94,14 +111,23 @@ int main() {
     InfraredInput infrared(infraredPort, {toggle});
     Api api(output);
     AppLoop app("pressure", store, output, diagnostics, 20,
-                &temperature, nullptr, &api, WritePolicy{}, &infrared);
+                &temperature, &network, &api, WritePolicy{}, &infrared);
     app.start();
     check(!output.fan && !output.led, "pressure run starts with both outputs off");
 
     for (std::uint32_t t = 0; t < 20000; ++t) {
         infraredPort.now = t;
+        networkPort.now = t;
         const bool pressed = t % 400 >= 50 && t % 400 < 80;
+        const auto writesBeforeNetworkEvent = output.writes;
         check(app.step(t, pressed), "pressure cycle remains active");
+        if (t == 10 || t == 5000 || t == 10010)
+            check(output.writes == writesBeforeNetworkEvent,
+                  "network connect, disconnect and recovery do not switch the output");
+        if (t == 10) check(app.snapshot().wifiConnected, "initial network connection is observed");
+        if (t == 5000 || t == 9999)
+            check(!app.snapshot().wifiConnected, "network failure clears connected state during API flood");
+        if (t == 10010) check(app.snapshot().wifiConnected, "paced network retry restores connection");
         if (t == 5001)
             check(app.snapshot().sensorStatus == SensorStatus::Invalid,
                   "sensor failure is observed during continuous API and local input");
@@ -113,6 +139,8 @@ int main() {
           "one response per cycle while requests never stop");
     check(sensor.starts == 20 && sensor.polls == 20 && sensor.samples == 19 && diagnostics.invalid == 1,
           "temperature attempts advance on schedule despite API flood and one failure");
+    check(networkPort.starts == 2 && networkPort.disconnects == 1,
+          "network retry waits five seconds after disconnection without starving local work");
     check(infraredPort.frames == 31 && output.writes == 51 && output.fan && output.led &&
               app.snapshot().lastCommandSource == CommandSource::Button,
           "50 debounced button presses and one infrared hold each act exactly once");

@@ -1,8 +1,8 @@
 # 输入压力与连续运行验收
 
-ESP-023 的主机压力场景使用 `AppLoopPressureTest.cpp`。它运行 20,000 轮、每轮递增 1 ms 的**模拟时钟**，每轮提供一个状态 API 请求；其间加入 50 次消抖按键、一次含 30 帧重复数据的红外长按，以及一次采集失败和恢复。检查每轮响应与最终输出一致、按键和红外没有被 API 饿死、采集按预定间隔继续。模拟时间为 20 秒，不是 20 秒的实物运行时间，更不是 2 小时连续运行验收。
+ESP-023 的主机压力场景使用 `AppLoopPressureTest.cpp`。它运行 20,000 轮、每轮递增 1 ms 的**模拟时钟**，每轮提供一个状态 API 请求；其间加入 50 次消抖按键、一次含 30 帧重复数据的红外长按、一次采集失败和恢复，以及 Wi-Fi 断开与限频重连。检查每轮响应与最终输出一致、按键和红外没有被 API 饿死、采集按预定间隔继续、网络变化不触发电机开关。模拟时间为 20 秒，不是 20 秒的实物运行时间，更不是 2 小时连续运行验收。
 
-从仓库根目录执行 `sh firmware/test/run-host-tests.sh`，输出中应出现 `PASS: continuous API, button, infrared and sensor scheduling (host simulation only)`。测试未测端口真实执行时间、网络缓冲上限、电源、GPIO、电机或复位原因；板端端口仍须保证非阻塞和有界处理。实际 HTTP 流量也不能由这个模拟 GET 入口代替。
+从仓库根目录执行 `sh firmware/test/run-host-tests.sh`，输出中应出现 `PASS: continuous API, button, infrared and sensor scheduling (host simulation only)`。模拟网络在第 5 秒断开，等待 5 秒后重试，并在第 10.01 秒恢复；检查连接状态、两次尝试和一次断开，不推断实际 Wi-Fi 驱动的耗时。测试未测端口真实执行时间、网络缓冲上限、电源、GPIO、电机或复位原因；板端端口仍须保证非阻塞和有界处理。实际 HTTP 流量也不能由这个模拟 GET 入口代替。
 
 ## 实物记录模板
 
