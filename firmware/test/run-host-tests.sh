@@ -1,6 +1,14 @@
 #!/bin/sh
 set -eu
 
+with_preview=false
+case "${1:-}" in
+    '') [ "$#" -eq 0 ] || { echo 'Unexpected empty argument' >&2; exit 2; } ;;
+    --with-preview) with_preview=true; shift ;;
+    *) echo 'Usage: sh firmware/test/run-host-tests.sh [--with-preview]' >&2; exit 2 ;;
+esac
+[ "$#" -eq 0 ] || { echo 'Too many arguments' >&2; exit 2; }
+
 firmware_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 build_dir=$(mktemp -d "${TMPDIR:-/tmp}/esp32fan-test.XXXXXX")
 trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
@@ -89,3 +97,10 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
 "$build_dir/infrared-input-test"
 
 node --test "$firmware_dir/test/WebClientTest.mjs" "$firmware_dir/test/ConfigDraftTest.mjs" "$firmware_dir/test/WebAssetsTest.mjs" "$firmware_dir/test/StateApiTest.mjs"
+
+if [ "$with_preview" = true ]; then
+    node --test "$firmware_dir/test/PreviewApiTest.mjs"
+else
+    echo 'SKIP: localhost preview HTTP tests (use --with-preview to include)'
+fi
+echo 'PASS: requested host regression suites (no ESP32 hardware validation)'

@@ -19,6 +19,8 @@ struct Outputs : OutputPort {
 struct Storage : ConfigPersistence {
     Outputs& out;
     unsigned loads = 0;
+    unsigned saves = 0;
+    bool failSave = false;
     explicit Storage(Outputs& output) : out(output) {}
     ReadResult read(ConfigRecord& record) override {
         check(out.ready && !out.fan && !out.led, "hardware off and LED off precede storage access");
@@ -27,7 +29,7 @@ struct Storage : ConfigPersistence {
         record.thresholds.offThresholdC = 30;
         return ReadResult::Found;
     }
-    bool replaceAtomically(const ConfigRecord&) override { return true; }
+    bool replaceAtomically(const ConfigRecord&) override { ++saves; return !failSave; }
 };
 struct Diagnostics : DiagnosticPort {
     unsigned boots = 0, changes = 0, networkEvents = 0, temperatureEvents = 0;
@@ -209,5 +211,77 @@ int main() {
     check(!irOutput.fan && irOutput.writes.size() == irWrites &&
               irApp.snapshot().lastCommandSource == CommandSource::Web,
           "same-cycle IR then API applies final output only, with no transient on pulse");
+    // Cross-module regression: real API/config/controller with synthetic I/O.
+    Outputs regressionOut;
+    Storage regressionDisk(regressionOut);
+    ConfigStore regressionStore(regressionDisk);
+    Diagnostics regressionLog;
+    Api regressionApi(regressionOut);
+    Temperature regressionSensor;
+    TemperatureService regressionTemperature(regressionSensor);
+    Infrared regressionRemote;
+    InfraredInput regressionIr(regressionRemote, {toggle});
+    AppLoop regression("regression", regressionStore, regressionOut, regressionLog, 20,
+                       &regressionTemperature, nullptr, &regressionApi, trusted, &regressionIr);
+    regression.start(); regression.step(0, false);
+    regressionSensor.next = TemperaturePoll::Ready;
+    regressionApi.requests.push_back(request("/api/v1/mode", "{\"mode\":\"auto\"}"));
+    regression.step(20, false);
+    check(regressionOut.fan && regression.snapshot().mode == Mode::Auto,
+          "fresh sample admits auto through real API and submits on output");
+    regressionRemote.press(30); regression.step(30, false);
+    check(!regressionOut.fan && regression.snapshot().mode == Mode::Manual &&
+              regression.snapshot().lastCommandSource == CommandSource::Infrared,
+          "IR toggle takes over automatic on rather than leaving auto active");
+    regressionApi.requests.push_back(request("/api/v1/mode", "{\"mode\":\"auto\"}"));
+    regression.step(40, false);
+    regressionRemote.press(100, true); regression.step(100, false);
+    check(regressionOut.fan && regression.snapshot().mode == Mode::Auto,
+          "held IR repeat cannot cancel a later explicit auto command");
+
+    const auto revisionBeforeSave = regression.snapshot().revision;
+    const auto writesBeforeSave = regressionOut.writes.size();
+    regressionDisk.failSave = true;
+    const auto config = request("/api/v1/config", "{\"onThresholdC\":45,\"offThresholdC\":42}");
+    regressionApi.requests.push_back(config); regression.step(110, false);
+    check(regressionApi.responses.back().status == 503 && regressionOut.fan &&
+              regressionOut.writes.size() == writesBeforeSave &&
+              regression.snapshot().revision == revisionBeforeSave &&
+              regression.snapshot().onThresholdC == 32 && regressionStore.current().onThresholdC == 32,
+          "failed API persistence preserves controller, store, revision and submitted output");
+    regressionDisk.failSave = false;
+    regressionApi.requests.push_back(config); regression.step(120, false);
+    check(regressionApi.responses.back().status == 200 && !regressionOut.fan && !regressionOut.led &&
+              regression.snapshot().mode == Mode::Auto && regressionStore.current().onThresholdC == 45 &&
+              regression.snapshot().revision == revisionBeforeSave + 1,
+          "saved thresholds recompute auto output before successful API response");
+    const auto saves = regressionDisk.saves;
+    const auto savedRevision = regression.snapshot().revision;
+    regressionApi.requests.push_back(config); regression.step(130, false);
+    check(regressionDisk.saves == saves && regression.snapshot().revision == savedRevision &&
+              regressionOut.writes.size() == writesBeforeSave + 1,
+          "repeated config request performs no extra persistence or physical write");
+    auto foreign = request("/api/v1/power", "{\"on\":true}");
+    foreign.origin = "http://foreign.example";
+    regressionApi.requests.push_back(foreign); regression.step(140, false);
+    check(regressionApi.responses.back().status == 403 && !regressionOut.fan &&
+              regression.snapshot().revision == savedRevision,
+          "cross-origin request cannot change auto state or physical output");
+
+    regression.step(1000, false);
+    regressionSensor.next = TemperaturePoll::Invalid;
+    regressionApi.requests.push_back(request("/api/v1/power", "{\"on\":true}"));
+    regression.step(1001, false);
+    check(regressionApi.responses.back().status == 200 && regressionOut.fan && regressionOut.led &&
+              regression.snapshot().mode == Mode::Manual &&
+              regression.snapshot().lastCommandSource == CommandSource::Web &&
+              regression.snapshot().fault == Fault::TemperatureUnavailable,
+          "same-cycle sensor fault exits auto before explicit manual command takes control");
+    regression.step(2000, false);
+    regressionSensor.next = TemperaturePoll::Ready;
+    regression.step(2001, false);
+    check(regressionOut.fan && regression.snapshot().mode == Mode::Manual &&
+              regression.snapshot().fault == Fault::None,
+          "sensor recovery clears fault without undoing the later manual command");
     std::cout << "PASS: AppLoop startup, bounded scheduling, final outputs and API integration (host only)\n";
 }
