@@ -38,4 +38,4 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
     -o "$build_dir/automatic-control-test"
 "$build_dir/automatic-control-test"
 
-node --test "$firmware_dir/test/WebClientTest.mjs" "$firmware_dir/test/ConfigDraftTest.mjs"
+node --test "$firmware_dir/test/WebClientTest.mjs" "$firmware_dir/test/ConfigDraftTest.mjs" "$firmware_dir/test/WebAssetsTest.mjs"

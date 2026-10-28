@@ -15,10 +15,10 @@
 - [按键消抖开发与测试](docs/development/button-input.md)：同一测试入口，覆盖长按、抖动、启动按住与计时回绕。
 - [手机控制页面与模拟预览](docs/development/web-control.md)：运行 `node firmware/tools/preview-server.mjs`，打开 `http://127.0.0.1:8312`；仅模拟设备，不控制实物。
 - [温控配置与存储边界](docs/development/config-store.md)：校验、故障回退、写入失败保护及板端接入要求。
-
 - [自动温控与故障恢复](docs/development/automatic-control.md)：回差、温度过期、手动接管与主循环调用顺序。
-
 - [网页温控配置与模拟接口](docs/development/web-temperature-config.md)：草稿保护、保存确认与存储失败模拟。
+- [网页编入 C++ 固件](docs/development/web-assets.md)：资源生成、路由表与字节一致性验证。
+- [真实 ESP32 联调流程](docs/development/esp32-bringup.md)：从 USB 烧录、串口日志到实物风扇联调。
 
 第一版 MVP 到 M4：手机在同一 Wi-Fi 下打开 ESP32 提供的网页，控制小风扇，并同步按键、红外操作后的控制状态。M5 增加温控，M6 完成异常场景验收。
 
