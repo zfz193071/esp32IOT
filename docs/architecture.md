@@ -107,6 +107,7 @@ FanController 不依赖 Wi-Fi、HTTP、红外库或具体 GPIO。硬件和通信
 ```text
 esp32IOT/
 ├── README.md
+├── README.zh-CN.md         # 中文项目入口
 ├── docs/
 │   ├── architecture.md       # 本设计与接口契约
 │   └── hardware.md           # 接线核对与待确认项
