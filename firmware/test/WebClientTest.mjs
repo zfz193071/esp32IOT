@@ -135,3 +135,39 @@ test('equal revision updates sample age; unsafe revision numbers are rejected', 
   assert.equal(h.client.state.revision, 0);
   assert.equal(h.client.connected, false);
 });
+
+test('configuration submits both fields through the same write lock', async () => {
+  const h = harness(); await connect(h);
+  const value = { onThresholdC: 35.5, offThresholdC: 32 };
+  const write = h.client.write('config', value);
+  assert.equal(await h.client.write('power', true), false);
+  assert.equal(h.calls[1].path, '/api/v1/config');
+  assert.deepEqual(JSON.parse(h.calls[1].init.body), value);
+  assert.equal(h.client.state.onThresholdC, 30);
+  h.calls[1].resolve(response(state({ ...value, revision: 1 })));
+  await settle(); h.calls[2].resolve(response(state({ ...value, revision: 1 })));
+  assert.equal(await write, true);
+  assert.equal(h.client.state.offThresholdC, 32);
+});
+
+test('invalid configuration is rejected locally without any request', async () => {
+  const h = harness(); await connect(h);
+  for (const value of [null, {}, { onThresholdC: 30 },
+    { onThresholdC: 30, offThresholdC: 29.1 }, { onThresholdC: 61, offThresholdC: 28 },
+    { onThresholdC: 30, offThresholdC: -1 }, { onThresholdC: '30', offThresholdC: 28 },
+    { onThresholdC: NaN, offThresholdC: 28 }, { onThresholdC: 30, offThresholdC: 28, extra: 1 }]) {
+    assert.equal(await h.client.write('config', value), false);
+  }
+  assert.equal(h.calls.length, 1);
+});
+
+test('storage failure never reports acceptance or changes confirmed configuration', async () => {
+  const h = harness(); await connect(h);
+  const write = h.client.write('config', { onThresholdC: 35, offThresholdC: 32 });
+  h.calls[1].resolve(response({ error: { code: 'STORAGE_FAILURE' } }, 503));
+  await settle(); h.calls[2].resolve(response(state()));
+  assert.equal(await write, false);
+  assert.equal(h.client.state.onThresholdC, 30);
+  assert.equal(h.client.state.offThresholdC, 28);
+  assert.match(h.client.message, /保存失败/);
+});

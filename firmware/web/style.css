@@ -30,4 +30,9 @@ dt { color: #53685f; } dd { margin: 0; text-align: right; }
 footer { text-align: center; padding-top: 18px; }
 aside, #fault { background: #fff1d8; color: #755016; padding: 12px; border-radius: 12px; font-size: 13px; margin-bottom: 16px; }
 [hidden] { display: none !important; }
+.fields { display: flex; gap: 12px; margin-top: 18px; }
+.fields label { flex: 1; min-width: 0; font-size: 13px; }
+input { display: block; width: 100%; min-height: 48px; margin-top: 6px; padding: 10px; border: 1px solid #9ab3a7; border-radius: 10px; font: inherit; font-size: 16px; color: #173c35; background: #fff; }
+input:disabled { background: #edf1ee; }
+input:focus-visible { outline: 3px solid #ba7b25; outline-offset: 2px; }
 @media (max-width: 360px) { .card { padding: 18px; } main { padding: 22px 12px; } button { padding: 10px; } }

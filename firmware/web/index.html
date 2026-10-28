@@ -24,9 +24,19 @@
       <div class="row"><h2 id="mode-title">运行模式</h2><strong id="mode">—</strong></div>
       <div class="buttons"><button id="manual" class="secondary" disabled>手动控制</button><button id="auto" class="secondary" disabled>自动温控</button></div>
       <p class="hint">切换手动模式会保持当前输出；要停止输出，请点“关闭输出”。</p>
-      <dl><div><dt>温度</dt><dd id="temperature">不可用</dd></div><div><dt>自动阈值</dt><dd id="thresholds">—</dd></div><div><dt>最近控制来源</dt><dd id="source">—</dd></div></dl>
+      <dl><div><dt>温度</dt><dd id="temperature">不可用</dd></div><div><dt>传感器状态</dt><dd id="sensor-health">等待采集</dd></div><div><dt>样本年龄</dt><dd id="sample-age">—</dd></div><div><dt>设备当前阈值</dt><dd id="thresholds">—</dd></div><div><dt>最近控制来源</dt><dd id="source">—</dd></div></dl>
       <p id="temperature-hint" class="hint">温度未就绪时，自动模式不可用。</p>
       <p id="fault" hidden>温度异常，自动控制已退出。温度恢复后不会自动重新开启。</p>
+    </section>
+    <section class="card" aria-labelledby="config-title">
+      <h2 id="config-title">温控设置</h2>
+      <p class="hint" id="config-help">范围 0～60 ℃，开启温度至少高于关闭温度 1 ℃。保存后自动控制立即使用新阈值。</p>
+      <form id="config-form" novalidate>
+        <div class="fields"><label for="threshold-on">开启温度（℃）<input id="threshold-on" type="number" inputmode="decimal" min="0" max="60" step="any" required disabled aria-describedby="config-help config-feedback"></label>
+        <label for="threshold-off">关闭温度（℃）<input id="threshold-off" type="number" inputmode="decimal" min="0" max="60" step="any" required disabled aria-describedby="config-help config-feedback"></label></div>
+        <div class="buttons"><button id="save-config" type="submit" disabled>保存阈值</button><button id="reset-config" type="button" class="secondary" disabled>使用设备值</button></div>
+        <p id="config-feedback" class="hint" role="status" aria-live="polite">等待加载设备阈值。</p>
+      </form>
     </section>
     <section class="status" aria-label="同步状态"><p id="message" role="status" aria-live="polite">正在连接设备…</p>
       <p id="last-sync">尚未同步</p><button id="refresh" class="text-button">重新同步</button></section>

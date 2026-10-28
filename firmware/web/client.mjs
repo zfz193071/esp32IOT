@@ -1,3 +1,5 @@
+import { validConfig } from './config.mjs';
+
 export function validState(s) {
   return s && typeof s.bootId === 'string' && s.bootId.length > 0 &&
     Number.isSafeInteger(s.revision) && s.revision >= 0 &&
@@ -51,9 +53,11 @@ export class DeviceClient {
           signal: controller.signal, cache: 'no-store', credentials: 'same-origin' });
         const body = await response.json();
         if (!response.ok) {
-          const error = new Error(body?.error?.code === 'TEMPERATURE_UNAVAILABLE'
-            ? '温度不可用，无法开启自动模式' : `设备拒绝请求（${response.status}）`);
-          error.rejected = response.status >= 400 && response.status < 500;
+          const storageFailure = response.status === 503 && body?.error?.code === 'STORAGE_FAILURE';
+          const error = new Error(storageFailure ? '保存失败，设备保留原配置' :
+            body?.error?.code === 'TEMPERATURE_UNAVAILABLE'
+              ? '温度不可用，无法开启自动模式' : `设备拒绝请求（${response.status}）`);
+          error.rejected = storageFailure || (response.status >= 400 && response.status < 500);
           throw error;
         }
         if (!validState(body)) throw new Error('设备状态格式无效');
@@ -103,7 +107,8 @@ export class DeviceClient {
   async write(kind, value) {
     if (this.busy || !this.connected) return false;
     if (!((kind === 'power' && typeof value === 'boolean') ||
-          (kind === 'mode' && ['manual', 'auto'].includes(value)))) return false;
+          (kind === 'mode' && ['manual', 'auto'].includes(value)) ||
+          (kind === 'config' && validConfig(value)))) return false;
     this.busy = true;
     // Invalidate a pre-command poll, including a late failure from that poll.
     ++this.epoch;
@@ -116,7 +121,7 @@ export class DeviceClient {
     try {
       const next = await this.request(`/api/v1/${kind}`, { method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(kind === 'power' ? { on: value } : { mode: value }) });
+        body: JSON.stringify(kind === 'power' ? { on: value } : kind === 'config' ? value : { mode: value }) });
       if (next.bootId !== this.state.bootId) {
         // A write crossing a reboot cannot establish that the requested action won.
         notice = '设备在请求期间重启；命令不重发';

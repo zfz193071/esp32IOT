@@ -27,11 +27,12 @@ node firmware/tools/preview-server.mjs
 | `firmware/web/style.css` | 自适应布局、触控按钮、焦点样式 |
 | `firmware/web/app.mjs` | DOM 更新、每秒轮询与点击绑定 |
 | `firmware/web/client.mjs` | 状态校验、写入互斥、超时与旧响应隔离 |
+| `firmware/web/config.mjs` | 阈值校验、独立编辑草稿与确认 |
 | `firmware/tools/preview-server.mjs` | 本机开发模拟器；不进入固件资源 |
 
-页面使用 `/api/v1/state`、`/api/v1/power`、`/api/v1/mode`，遵循架构的 JSON 字段与错误约定。无外部字体、CDN 或网络资源。模拟器只支持手动模式，没有真实 Wi-Fi、GPIO、红外或温度采集。
+页面使用 `/api/v1/state`、`/api/v1/power`、`/api/v1/mode`、`/api/v1/config`，遵循架构的 JSON 字段与错误约定。无外部字体、CDN 或网络资源。模拟器只支持手动模式和内存阈值保存，没有真实 Wi-Fi、GPIO、红外或温度采集。新增表单与故障验证见 [网页温控配置与模拟接口](web-temperature-config.md)。
 
-后续固件需嵌入并提供四个 web 文件：`/` 为 `text/html`，`/style.css` 为 `text/css`，`/app.mjs` 和 `/client.mjs` 为 `text/javascript`。构建工具未锁定，因此嵌入生成脚本及 ESP32 路由装配尚未实现。模拟标记仅由开发服务器的 `X-ESP32-Simulator: true` 响应头启用，固件不发送该标记。
+后续固件需嵌入并提供五个 web 文件：`/` 为 `text/html`，`/style.css` 为 `text/css`，`/app.mjs`、`/client.mjs` 和 `/config.mjs` 为 `text/javascript`。构建工具未锁定，因此嵌入生成脚本及 ESP32 路由装配尚未实现。模拟标记仅由开发服务器的 `X-ESP32-Simulator: true` 响应头启用，固件不发送该标记。
 
 ## 请求与显示规则
 
