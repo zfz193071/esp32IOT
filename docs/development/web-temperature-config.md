@@ -20,6 +20,8 @@ ESP-020 的网页表单、请求协调和本机模拟配置 API 已实现。C++ 
 
 同源规则沿用模拟服务器的 Host／Origin 校验，非 JSON 写入被拒绝。模拟器不替代 ESP-013 的 C++ 写处理测试或板端 HTTP 验收。
 
+本机开发模拟器额外提供 `PUT /__simulator/temperature`，只接受 `{"temperatureC":数字}` 或 `{"temperatureC":null}`，且仅监听 `127.0.0.1`。它不是设备 API，也不会打包进固件资源。注入有效温度后，页面可以切换自动模式并观察 30℃ 开启、28℃ 关闭的默认回差；修改阈值会立即按新值计算。注入 `null` 模拟传感器失效：自动模式退出并关机，故障显示为温度不可用；手动开关仍可用。恢复有效温度会清除故障，但不会自行重进自动模式。模拟器不模拟真实采样时间流逝、传感器驱动或电机动作。
+
 ## 本机运行与故障验证
 
 ```sh
@@ -29,15 +31,19 @@ ESP32_PREVIEW_PORT=8313 node firmware/tools/preview-server.mjs
 # 独立故障模拟：合法且有变化的配置保存返回 503
 ESP32_PREVIEW_PORT=8314 ESP32_SIMULATE_STORAGE_FAILURE=1 node firmware/tools/preview-server.mjs
 
+# 在默认 8312 端口的另一终端注入样本；null 可模拟传感器失效
+curl -X PUT http://127.0.0.1:8312/__simulator/temperature -H 'Content-Type: application/json' -d '{"temperatureC":30}'
+curl -X PUT http://127.0.0.1:8312/__simulator/temperature -H 'Content-Type: application/json' -d '{"temperatureC":null}'
+
 # 全部主机测试，无需开放本地端口
 sh firmware/test/run-host-tests.sh
 
-# HTTP 集成测试，临时使用 18313 和 18314 端口并自动停止测试进程
+# HTTP 集成测试，临时使用 18313～18315 端口并自动停止测试进程
 node --test firmware/test/PreviewApiTest.mjs
 ```
 
 正常预览为 `http://127.0.0.1:8313`，故障预览为 `http://127.0.0.1:8314`。如端口已被占用，先确认对应进程归属，不关闭其他任务服务。
 
-2026-10-28：12 组网页请求与草稿测试通过；2 组实际本机 HTTP 集成测试验证完整配置提交、相同值幂等、非法参数、跨源拒绝、资源路由，以及 503 后两个阈值保持不变。C++ 控制器、消抖、配置和自动温控回归继续通过。
+2026-10-28：12 组网页请求与草稿测试通过；3 组实际本机 HTTP 集成测试验证完整配置提交、相同值幂等、非法参数、跨源拒绝、资源路由、503 后原阈值保持不变，以及模拟温度注入、自动回差、故障退出和恢复后手动接管。C++ 控制器、消抖、配置和自动温控回归继续通过。
 
 本轮 Chrome DevTools 因专用 profile 已被占用而无法连接，未完成新增表单的手机布局和交互目视检查。此前的基础页面检查不能替代新增表单验收。传感器失效／恢复的网页联调、固件资源嵌入、真实持久化及设备重启验收仍待完成，ESP-020 保持进行中。

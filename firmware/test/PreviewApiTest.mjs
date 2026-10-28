@@ -62,3 +62,72 @@ test('preview storage fault returns 503 and retains both original thresholds', a
     assert.deepEqual(await (await fetch(`${base}/api/v1/state`)).json(), before);
   });
 });
+
+test('preview temperature injection exercises automatic hysteresis and fault recovery', async () => {
+  await withServer(18315, false, async (base) => {
+    const put = (path, body, headers = {}) => fetch(`${base}${path}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    });
+    const inject = async (temperatureC) => {
+      const response = await put('/__simulator/temperature', { temperatureC });
+      assert.equal(response.status, 200);
+      return response.json();
+    };
+    const mode = async (value) => put('/api/v1/mode', { mode: value });
+
+    assert.equal((await mode('auto')).status, 409);
+    let state = await inject(29);
+    assert.equal(state.sensorStatus, 'ok');
+    assert.equal(state.sampleAgeMs, 0);
+    assert.equal(state.mode, 'manual');
+    assert.equal((await put('/api/v1/power', { on: true })).status, 200);
+    state = await (await mode('auto')).json();
+    assert.equal(state.mode, 'auto');
+    assert.equal(state.fanOutputOn, false);
+
+    state = await inject(30);
+    assert.equal(state.fanOutputOn, true);
+    assert.equal(state.lastCommandSource, 'system');
+    state = await inject(29);
+    assert.equal(state.fanOutputOn, true);
+    state = await (await mode('auto')).json();
+    assert.equal(state.fanOutputOn, true, 'repeating auto must retain deadband output');
+    state = await inject(28);
+    assert.equal(state.fanOutputOn, false);
+
+    state = await inject(34);
+    assert.equal(state.fanOutputOn, true);
+    state = await (await put('/api/v1/config', { onThresholdC: 35, offThresholdC: 32 })).json();
+    assert.equal(state.mode, 'auto');
+    assert.equal(state.fanOutputOn, true, 'new thresholds retain output inside deadband');
+    state = await inject(32);
+    assert.equal(state.fanOutputOn, false);
+
+    state = await inject(null);
+    assert.equal(state.sensorStatus, 'invalid');
+    assert.equal(state.mode, 'manual');
+    assert.equal(state.fanOutputOn, false);
+    assert.equal(state.fault, 'temperature_unavailable');
+    assert.equal((await mode('auto')).status, 409);
+    state = await (await put('/api/v1/power', { on: true })).json();
+    assert.equal(state.fanOutputOn, true);
+    assert.equal(state.fault, 'temperature_unavailable');
+    state = await inject(31);
+    assert.equal(state.mode, 'manual');
+    assert.equal(state.fanOutputOn, true);
+    assert.equal(state.fault, 'none');
+    state = await (await mode('auto')).json();
+    assert.equal(state.fanOutputOn, false, 'manual output must not seed automatic deadband');
+
+    const beforeInvalid = state;
+    for (const invalid of [{}, { temperatureC: '30' },
+      { temperatureC: 30, extra: true }, { temperatureC: [] }]) {
+      assert.equal((await put('/__simulator/temperature', invalid)).status, 400);
+    }
+    assert.equal((await put('/__simulator/temperature', { temperatureC: 30 },
+      { Origin: 'https://foreign.example' })).status, 403);
+    assert.equal((await fetch(`${base}/__simulator/temperature`)).status, 404);
+    assert.deepEqual(await (await fetch(`${base}/api/v1/state`)).json(), beforeInvalid);
+  });
+});
