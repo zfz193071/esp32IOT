@@ -35,6 +35,7 @@ sh firmware/test/run-host-tests.sh --with-preview
 | 连接超时、重试节奏、断网继续控制 | NetworkServiceTest.cpp | 模拟无线端口 |
 | 红外精确映射、重复帧、过期及乱序 | InfraredInputTest.cpp | 合成编码，不测真实遥控协议 |
 | 最终输出、命令排序、配置失败、红外接管与故障同轮处理 | AppLoopTest.cpp | 使用真实模块、模拟输出端口，响应在输出提交后发送 |
+| 连续 API 请求下的按键、红外和采集推进 | AppLoopPressureTest.cpp | 20,000 轮模拟时间，不测真实吞吐或连续运行 |
 | C++ 状态 JSON 与网页校验契约 | StateApiTest.mjs | 跨语言字段和响应格式 |
 | 页面编入 C++ 后的字节一致性 | WebAssetsTest.mjs | 资源生成、编译和路由 |
 | 网页串行写、旧响应、重启与未知结果 | WebClientTest.mjs | 模拟 fetch，不测浏览器布局 |
@@ -57,4 +58,4 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 
 ## 本轮结果
 
-2026-10-28，默认入口与 `--with-preview` 完整入口均退出 0：9 个 C++ 测试程序、14 项 Node 测试和完整入口额外的 2 项模拟 HTTP 测试全部通过。`sh -n` 语法检查通过，未知参数以退出码 2 拒绝。未执行任何板端或实物验收。
+2026-10-28，ESP-022 默认入口与 `--with-preview` 完整入口均退出 0：当时 9 个 C++ 测试程序、14 项 Node 测试和完整入口额外的 2 项模拟 HTTP 测试全部通过。ESP-023 后续将主机压力测试加入默认入口。`sh -n` 语法检查通过，未知参数以退出码 2 拒绝。未执行任何板端或实物验收。

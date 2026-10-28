@@ -33,6 +33,7 @@
 - [红外输入与重复帧过滤](docs/development/infrared-input.md)：精确映射、长按过滤、时间戳与板端解码契约。
 
 - [软件回归覆盖与实物验证边界](docs/development/regression.md)：统一测试入口、可选 HTTP 模拟测试及手工验收步骤。
+- [输入压力与连续运行验收](docs/development/pressure-validation.md)：主机调度压力测试与实物记录模板。
 
 第一版 MVP 到 M4：手机在同一 Wi-Fi 下打开 ESP32 提供的网页，控制小风扇，并同步按键、红外操作后的控制状态。M5 增加温控，M6 完成异常场景验收。
 
