@@ -5,8 +5,8 @@ namespace esp32fan {
 InfraredInput::InfraredInput(InfraredPort& port, std::vector<InfraredBinding> bindings, InfraredTiming timing)
     : port_(port), bindings_(std::move(bindings)), timing_(timing) {
     if (bindings_.empty() || bindings_.size() > 3 || timing_.releaseGapMs == 0 ||
-        timing_.maxFrameAgeMs == 0 || timing_.releaseGapMs >= 0x80000000u ||
-        timing_.maxFrameAgeMs >= 0x80000000u) return;
+        timing_.maxFrameAgeMs == 0 ||
+        static_cast<std::uint64_t>(timing_.releaseGapMs) + timing_.maxFrameAgeMs >= 0x80000000ULL) return;
     for (std::size_t i = 0; i < bindings_.size(); ++i) {
         const auto& binding = bindings_[i];
         if (binding.protocol == 0 || (binding.action != InfraredAction::On &&
@@ -21,6 +21,11 @@ InfraredInput::InfraredInput(InfraredPort& port, std::vector<InfraredBinding> bi
 bool InfraredInput::configured() const { return configured_; }
 InfraredAction InfraredInput::update(std::uint32_t nowMs) {
     if (!configured_) return InfraredAction::None;
+    // An accepted queued frame can be at most maxFrameAgeMs old. Once the
+    // previous key is older than that plus the release gap, no eligible frame
+    // can belong to the old hold. Expire it before half-range clock ambiguity.
+    if (haveLast_ && static_cast<std::uint32_t>(nowMs - lastSeenMs_) >
+                         timing_.releaseGapMs + timing_.maxFrameAgeMs) haveLast_ = false;
     InfraredFrame frame;
     if (!port_.takeFrame(frame) || !frame.valid ||
         static_cast<std::uint32_t>(nowMs - frame.receivedAtMs) > timing_.maxFrameAgeMs) return InfraredAction::None;

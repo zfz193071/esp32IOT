@@ -67,6 +67,32 @@ int main() {
     port.queue.push_back(frame(2, 4101));
     const auto reads = port.reads;
     input.update(4101);
+
+    Port longIdlePort;
+    InfraredInput longIdle(longIdlePort, {toggle});
+    longIdlePort.queue.push_back(frame(9, 1));
+    check(longIdle.update(1) == InfraredAction::Toggle, "first key before long idle accepted");
+    longIdlePort.queue.push_back(frame(9, 200));
+    check(longIdle.update(450) == InfraredAction::None,
+          "queued full frame captured within the hold gap stays suppressed at maximum age");
+    check(longIdle.update(700) == InfraredAction::None, "recent history is retained at age plus gap boundary");
+    longIdlePort.queue.push_back(frame(9, 450));
+    check(longIdle.update(700) == InfraredAction::Toggle,
+          "old queued full frame at inclusive age is ordered by capture time");
+    longIdle.update(951); // Release history before the half-range clock boundary.
+    longIdlePort.queue.push_back(frame(9, 0x80000020u));
+    check(longIdle.update(0x80000020u) == InfraredAction::Toggle,
+          "first press after more than half a clock cycle idle is accepted");
+    longIdlePort.queue.push_back(frame(9, 0x80000021u));
+    check(longIdle.update(0x80000021u) == InfraredAction::None,
+          "long-idle recovery still suppresses immediate full-frame repeats");
+    Port idleWithoutUpdates;
+    InfraredInput resumed(idleWithoutUpdates, {toggle});
+    idleWithoutUpdates.queue.push_back(frame(9, 1));
+    check(resumed.update(1) == InfraredAction::Toggle, "first key before paused loop accepted");
+    idleWithoutUpdates.queue.push_back(frame(9, 0x80000020u));
+    check(resumed.update(0x80000020u) == InfraredAction::Toggle,
+          "first fresh frame after a long loop pause expires obsolete hold history");
     check(port.reads == reads + 1 && port.queue.size() == 1, "one loop consumes at most one IR frame");
     input.update(4101);
 
@@ -96,5 +122,8 @@ int main() {
     check(!InfraredInput(disabled, {on}, invalid).configured(), "zero release gap rejected");
     invalid.releaseGapMs = 250; invalid.maxFrameAgeMs = 0x80000000u;
     check(!InfraredInput(disabled, {on}, invalid).configured(), "ambiguous half-range clock limit rejected");
+    invalid.releaseGapMs = 0x7fffffffu; invalid.maxFrameAgeMs = 1;
+    check(!InfraredInput(disabled, {on}, invalid).configured(),
+          "release and queue-age window must fit inside the half-range clock limit");
     std::cout << "PASS: infrared mapping, hold filtering, frame age and wrap (host only)\n";
 }
