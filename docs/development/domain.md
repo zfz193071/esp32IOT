@@ -15,7 +15,7 @@ sh firmware/test/run-host-tests.sh
 ## 命令与状态约定
 
 - `setPower(on, source)`：显式开／关并进入手动模式。
-- `setMode(Manual, source)`：保留当前输出；当前阶段 `Auto` 始终返回 `TemperatureUnavailable`。
+- `setMode(Manual, source)`：保留当前输出；`Auto` 仅在已有有效且未过期温度时接受，否则返回 `TemperatureUnavailable`。
 - `toggleFromButton()`：在控制器内部读取当前输出并切换，来源为 `Button`。输入消抖属于 ESP-005。
 - `setWifiConnected(connected)`：更新网络状态，保留模式、输出与命令来源。
 - `snapshot()`：返回状态副本，调用者不能借此修改控制器内部状态。
@@ -31,7 +31,7 @@ sh firmware/test/run-host-tests.sh
 
 `revision` 使用无符号 64 位整数，初始为 0。每次被接受的命令若改变公开状态（包括 `lastCommandSource`），版本加 1；同来源的相同开关命令不加版本。同一个输出值来自不同来源时，来源改变，因此版本加 1。网络连接状态变化也加 1；查询、重复网络通知和被拒绝命令不加版本。
 
-温度与阈值字段已预留：默认 30／28℃，`hasTemperature=false`、`hasSample=false`。HTTP 适配器必须把不可用的 `temperatureC`、`sampleAgeMs` 输出为 JSON `null`，不能把内部占位值 0 当成有效测量。采样年龄未来由单调时钟和最后有效采样时间计算，单纯时间流逝不增加业务版本；温度、健康状态或故障等状态变化才推进版本。采样与自动状态转换分别在 ESP-017/019 实现。
+启动默认阈值为 30／28℃，`hasTemperature=false`、`hasSample=false`。HTTP 适配器必须把不可用的 `temperatureC`、`sampleAgeMs` 输出为 JSON `null`，不能把内部占位值 0 当成有效测量。ESP-019 已实现注入采样和时钟推进，年龄变化不增加业务版本，温度、健康状态或故障变化才推进版本。真实采集仍待 ESP-017；调用顺序见 [自动温控与故障恢复](automatic-control.md)。
 
 ## 验证边界与后续工作
 

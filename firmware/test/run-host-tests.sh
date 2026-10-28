@@ -30,4 +30,12 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
     -o "$build_dir/config-store-test"
 "$build_dir/config-store-test"
 
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" \
+    "$firmware_dir/src/config/ConfigStore.cpp" \
+    "$firmware_dir/src/domain/FanController.cpp" \
+    "$firmware_dir/test/AutomaticControlTest.cpp" \
+    -o "$build_dir/automatic-control-test"
+"$build_dir/automatic-control-test"
+
 node --test "$firmware_dir/test/WebClientTest.mjs"
