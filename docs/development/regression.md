@@ -35,6 +35,7 @@ sh firmware/test/run-host-tests.sh --with-preview
 | 连接超时、重试节奏、断网继续控制 | NetworkServiceTest.cpp | 模拟无线端口 |
 | 红外精确映射、重复帧、过期及乱序 | InfraredInputTest.cpp | 合成编码，不测真实遥控协议 |
 | 最终输出、命令排序、配置失败、红外接管与故障同轮处理 | AppLoopTest.cpp | 使用真实模块、模拟输出端口，响应在输出提交后发送 |
+| M4 手机／按键／红外、断网重连和新启动联合场景 | AppLoopTest.cpp | 模拟端口联合演练，不代替手机与实物验收 |
 | 连续 API 请求下的按键、红外和采集推进 | AppLoopPressureTest.cpp | 20,000 轮模拟时间，不测真实吞吐或连续运行 |
 | C++ 状态 JSON 与网页校验契约 | StateApiTest.mjs | 跨语言字段和响应格式 |
 | 页面编入 C++ 后的字节一致性 | WebAssetsTest.mjs | 资源生成、编译和路由 |

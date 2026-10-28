@@ -97,6 +97,91 @@ WriteRequest request(const std::string& path, const std::string& body, const std
     req.contentType = "application/json";
     return req;
 }
+void mvpSoftwareRehearsal() {
+    Outputs output;
+    Storage disk(output);
+    ConfigStore store(disk);
+    Diagnostics log;
+    Api api(output);
+    Network radio;
+    NetworkService network(radio);
+    Infrared remote;
+    InfraredBinding toggle;
+    toggle.protocol = 7; toggle.address = 42; toggle.command = 9;
+    toggle.action = InfraredAction::Toggle;
+    InfraredInput infrared(remote, {toggle});
+    AppLoop app("mvp-boot-1", store, output, log, 20,
+                nullptr, &network, &api, WritePolicy{}, &infrared);
+    app.start(); app.step(0, false);
+    radio.link = NetworkLink::Connected;
+    app.step(20, false);
+    check(app.snapshot().wifiConnected && !output.fan,
+          "M4 software rehearsal connects without changing startup-off output");
+
+    api.requests.push_back(request("/api/v1/power", "{\"on\":true}"));
+    app.step(30, false);
+    check(api.responses.back().status == 200 && output.fan &&
+              app.snapshot().lastCommandSource == CommandSource::Web,
+          "web command reaches unified controller over trusted device address");
+    app.step(40, true); app.step(60, true);
+    check(!output.fan && app.snapshot().lastCommandSource == CommandSource::Button,
+          "button takes over web output");
+    app.step(70, false); app.step(90, false);
+    remote.press(100); app.step(100, false);
+    check(output.fan && app.snapshot().lastCommandSource == CommandSource::Infrared,
+          "IR takes over button output");
+    WriteRequest get;
+    get.method = "GET"; get.path = "/api/v1/state";
+    api.requests.push_back(get); app.step(101, false);
+    check(api.responses.back().status == 200 &&
+              api.responses.back().body.find("\"lastCommandSource\":\"infrared\"") != std::string::npos,
+          "state API reports the latest local command to the browser");
+
+    radio.link = NetworkLink::Disconnected;
+    api.requests.push_back(request("/api/v1/power", "{\"on\":false}"));
+    app.step(120, false);
+    check(!app.snapshot().wifiConnected && api.responses.back().status == 403 && output.fan,
+          "disconnect removes dynamic web write authority without changing output");
+    remote.press(350); app.step(350, false);
+    app.step(360, true); app.step(380, true);
+    check(output.fan && app.snapshot().lastCommandSource == CommandSource::Button &&
+              !app.snapshot().wifiConnected,
+          "IR and button continue to control output during network outage");
+
+    app.step(5120, false); // Retry delay measured from disconnect at 120.
+    radio.link = NetworkLink::Connected;
+    app.step(5121, false);
+    check(app.snapshot().wifiConnected && output.fan,
+          "paced reconnect restores network state without overriding local output");
+    api.requests.push_back(request("/api/v1/mode", "{\"mode\":\"auto\"}"));
+    app.step(5122, false);
+    check(api.responses.back().status == 409 && output.fan && app.snapshot().mode == Mode::Manual,
+          "M4 without a sensor rejects auto while retaining manual output");
+    api.requests.push_back(get); app.step(5123, false);
+    check(api.responses.back().status == 200 &&
+              api.responses.back().body.find("\"lastCommandSource\":\"button\"") != std::string::npos,
+          "browser read after reconnect reflects local commands made offline");
+    api.requests.push_back(request("/api/v1/power", "{\"on\":false}"));
+    app.step(5124, false);
+    const auto offRevision = app.snapshot().revision;
+    const auto offWrites = output.writes.size();
+    api.requests.push_back(request("/api/v1/power", "{\"on\":false}"));
+    app.step(5125, false);
+    check(api.responses.back().status == 200 && !output.fan && !output.led &&
+              output.writes.size() == offWrites && app.snapshot().revision == offRevision,
+          "repeated explicit web off after reconnect causes no second output write");
+
+    Outputs restartedOutput;
+    Storage restartedDisk(restartedOutput);
+    ConfigStore restartedStore(restartedDisk);
+    Diagnostics restartedLog;
+    AppLoop restarted("mvp-boot-2", restartedStore, restartedOutput, restartedLog, 20);
+    restarted.start(); restarted.step(0, false);
+    check(!restartedOutput.fan && !restartedOutput.led &&
+              restarted.snapshot().mode == Mode::Manual && restarted.snapshot().revision == 0 &&
+              restarted.snapshot().bootId != app.snapshot().bootId,
+          "new boot starts manual/off with a new identity and no queued historic command");
+}
 int main() {
     Outputs output;
     Storage persistence(output);
@@ -283,5 +368,6 @@ int main() {
     check(regressionOut.fan && regression.snapshot().mode == Mode::Manual &&
               regression.snapshot().fault == Fault::None,
           "sensor recovery clears fault without undoing the later manual command");
+    mvpSoftwareRehearsal();
     std::cout << "PASS: AppLoop startup, bounded scheduling, final outputs and API integration (host only)\n";
 }
