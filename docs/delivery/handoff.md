@@ -8,11 +8,13 @@
 |---|---|---|
 | C++ 控制器、按键与红外输入、温度与网络调度、配置和 API 规则 | `firmware/src/` | [主机回归清单](../development/regression.md)；10 个 C++ 测试程序 |
 | 网页及固件资源生成 | `firmware/web/`、`firmware/tools/embed-web.mjs` | 5 条路由的逐字节和可重复生成测试；[资源说明](../development/web-assets.md) |
-| 本机模拟预览 | `firmware/tools/preview-server.mjs` | 14 项 Node 默认测试及 2 项可选模拟 HTTP 测试；[运行指南](../development/from-zero.md) |
+| 本机模拟预览 | `firmware/tools/preview-server.mjs` | 页面与接口模拟测试；[运行指南](../development/from-zero.md) |
 | 模拟输入压力 | `firmware/test/AppLoopPressureTest.cpp` | 20,000 轮模拟调度；[边界与实物记录](../development/pressure-validation.md) |
 | Wi-Fi 配置样例 | `firmware/config/wifi.example.h` | 仅占位值；私有 `wifi.local.h` 被 Git 忽略，当前代码尚未读取 |
 
 主机回归入口为 `sh firmware/test/run-host-tests.sh`；要加入本地模拟 HTTP 测试，使用 `--with-preview`。网页资源使用 `node firmware/tools/embed-web.mjs` 生成到被忽略的 `firmware/build/generated/`。构建产物来源、版本和校验方式见 [网页资源说明](../development/web-assets.md)。这些命令与板端编译、烧录是不同步骤。
+
+运行 `node firmware/tools/check-release-readiness.mjs` 可检查 ESP-001～025 的工单文件是否齐全、状态是否精确为“已完成”、验收项是否全部勾选、完成记录是否不再是占位文本。当前检查报告 `0/25` 并以退出码 1 阻止将这份文档当成已完成发布；参数错误返回 2。检查只验证文档结构，不能证实照片、日志、固件产物或实物结果的真实性，最终仍须人工逐项核对。
 
 ## 必需工单与发布门槛
 
