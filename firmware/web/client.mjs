@@ -1,14 +1,22 @@
 import { validConfig } from './config.mjs';
 
 export function validState(s) {
-  return s && typeof s.bootId === 'string' && s.bootId.length > 0 &&
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
+  const healthy = s.sensorStatus === 'ok';
+  const validTemperature = healthy
+    ? Number.isFinite(s.temperatureC) && Number.isSafeInteger(s.sampleAgeMs) &&
+      s.sampleAgeMs >= 0 && s.sampleAgeMs <= 5000
+    : s.temperatureC === null;
+  return typeof s.bootId === 'string' && s.bootId.length > 0 && s.bootId.length <= 128 &&
+    /^[\x00-\x7f]+$/.test(s.bootId) &&
     Number.isSafeInteger(s.revision) && s.revision >= 0 &&
     ['manual', 'auto'].includes(s.mode) && typeof s.fanOutputOn === 'boolean' &&
-    (s.temperatureC === null || Number.isFinite(s.temperatureC)) &&
     ['initializing', 'ok', 'invalid', 'stale'].includes(s.sensorStatus) &&
     (s.sampleAgeMs === null || (Number.isSafeInteger(s.sampleAgeMs) && s.sampleAgeMs >= 0)) &&
-    Number.isFinite(s.onThresholdC) && Number.isFinite(s.offThresholdC) &&
+    validTemperature && validConfig({ onThresholdC: s.onThresholdC, offThresholdC: s.offThresholdC }) &&
     ['none', 'temperature_unavailable'].includes(s.fault) &&
+    (s.mode !== 'auto' || (healthy && s.fault === 'none')) &&
+    (!healthy || s.fault === 'none') &&
     ['button', 'infrared', 'web', 'system'].includes(s.lastCommandSource) &&
     typeof s.wifiConnected === 'boolean';
 }

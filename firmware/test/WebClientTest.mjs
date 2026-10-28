@@ -115,6 +115,38 @@ test('invalid state and network failure preserve historical data and disable wri
   assert.equal(h.client.connected, false);
 });
 
+test('inconsistent device snapshots cannot replace the last confirmed state', async () => {
+  const h = harness(); await connect(h);
+  const invalid = [
+    { onThresholdC: 29, offThresholdC: 28.5 },
+    { onThresholdC: 61 },
+    { sensorStatus: 'ok', temperatureC: null, sampleAgeMs: 0 },
+    { sensorStatus: 'ok', temperatureC: 30, sampleAgeMs: null },
+    { sensorStatus: 'ok', temperatureC: 30, sampleAgeMs: 5001 },
+    { sensorStatus: 'invalid', temperatureC: 30, sampleAgeMs: 0 },
+    { mode: 'auto', sensorStatus: 'invalid' },
+    { sensorStatus: 'ok', temperatureC: 30, sampleAgeMs: 0,
+      fault: 'temperature_unavailable' },
+    { bootId: '设备启动' },
+    { bootId: 'x'.repeat(129) },
+  ];
+  for (const change of invalid) {
+    const refresh = h.client.refresh();
+    h.calls.at(-1).resolve(response(state({ revision: 1, ...change })));
+    assert.equal(await refresh, false);
+    assert.equal(h.client.connected, false);
+    assert.equal(h.client.state.revision, 0);
+    assert.equal(h.client.state.onThresholdC, 30);
+    assert.equal(await h.client.write('power', true), false);
+  }
+  const recovery = h.client.refresh();
+  h.calls.at(-1).resolve(response(state({ revision: 2, sensorStatus: 'ok',
+    temperatureC: 30, sampleAgeMs: 5000 })));
+  assert.equal(await recovery, true);
+  assert.equal(h.client.connected, true);
+  assert.equal(h.client.state.revision, 2);
+});
+
 test('unavailable auto mode returns a visible rejection and retains confirmed output', async () => {
   const h = harness(); await connect(h);
   const write = h.client.write('mode', 'auto');
