@@ -20,7 +20,7 @@ TemperatureService 不访问 GPIO、不决定电机输出，仅返回 None、Sam
 
 ## App 装配顺序
 
-每轮先处理采集事件，再推进控制器健康时钟，再处理用户命令和最后一次硬件输出：
+[AppLoop](app-loop.md) 已实现以下软件装配顺序：每轮先处理采集事件，再推进控制器健康时钟，再处理用户命令和最后一次硬件输出：
 
 ```cpp
 const auto event = temperatureService.update(nowMs);
