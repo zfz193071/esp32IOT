@@ -18,7 +18,7 @@ sh firmware/test/run-host-tests.sh
 sh firmware/test/run-host-tests.sh --with-preview
 ```
 
-该选项额外运行 PreviewApiTest，启动并清理自己的模拟进程，使用本地端口 18313 和 18314；端口需空闲，运行环境需允许监听本地网络。不要为测试终止其他进程。默认执行会明确打印该项 SKIP，不能把默认成功记录为模拟 HTTP 已通过。
+该选项额外运行 PreviewApiTest，启动并清理自己的模拟进程，使用本地端口 18313～18315；端口需空闲，运行环境需允许监听本地网络。不要为测试终止其他进程。默认执行会明确打印该项 SKIP，不能把默认成功记录为模拟 HTTP 已通过。
 
 任一断言或编译失败会使脚本非零退出；C++ 输出 `FAIL: 规则说明`，Node 输出失败用例和断言位置。只有所有请求的套件通过才打印最后的 PASS。退出码 2 表示不支持的脚本参数。
 
@@ -41,7 +41,7 @@ sh firmware/test/run-host-tests.sh --with-preview
 | 页面编入 C++ 后的字节一致性 | WebAssetsTest.mjs | 资源生成、编译和路由 |
 | 网页串行写、旧响应、重启与未知结果 | WebClientTest.mjs | 模拟 fetch，不测浏览器布局 |
 | 配置草稿、完整提交与保存确认 | ConfigDraftTest.mjs | 页面配置状态逻辑 |
-| 模拟 HTTP 配置原子性、同源限制与 503 | PreviewApiTest.mjs | 可选；Node 模拟服务，不是 C++ HTTP 驱动 |
+| 模拟 HTTP 配置原子性、同源限制、503 与温度过期 | PreviewApiTest.mjs | 可选；Node 模拟服务，不是 C++ HTTP 驱动 |
 | 首版工单归档门槛 | ReleaseReadinessTest.mjs | 测试 25 张必需工单的状态、勾选与完成记录检查；不能验证证据真实性 |
 
 AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；随后网页重新启用自动时，旧红外长按重复不接管；配置保存失败不改变输出、阈值或 revision，保存成功先重新计算输出再响应，重复保存不再写入；跨源写入无状态副作用；采集失效与手动开启同轮到达时先退出自动再执行手动，采集恢复不撤销后来的手动命令。

@@ -2,6 +2,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import { validConfig } from '../web/config.mjs';
 
 const port = Number(process.env.ESP32_PREVIEW_PORT || 8312);
@@ -17,14 +18,29 @@ const initial = () => ({ bootId: randomUUID(), revision: 0, mode: 'manual', fanO
   temperatureC: null, sensorStatus: 'initializing', sampleAgeMs: null,
   onThresholdC: 30, offThresholdC: 28, fault: 'none', lastCommandSource: 'system', wifiConnected: true });
 let state = initial();
+let sampleTimeMs = null;
 function publish(next) {
-  const changed = Object.keys(state).some((key) => key !== 'revision' && state[key] !== next[key]);
+  const changed = Object.keys(state).some((key) =>
+    key !== 'revision' && key !== 'sampleAgeMs' && state[key] !== next[key]);
   state = { ...next, revision: state.revision + (changed ? 1 : 0) };
 }
 function automaticOutput(temperatureC, thresholds, previous) {
   if (temperatureC >= thresholds.onThresholdC) return true;
   if (temperatureC <= thresholds.offThresholdC) return false;
   return previous;
+}
+function refreshSampleAge() {
+  if (sampleTimeMs === null) return;
+  const age = Math.max(0, Math.floor(performance.now() - sampleTimeMs));
+  if (state.sensorStatus === 'ok' && age > 5000) {
+    const wasAuto = state.mode === 'auto';
+    publish({ ...state, temperatureC: null, sensorStatus: 'stale', sampleAgeMs: age,
+      mode: wasAuto ? 'manual' : state.mode, fanOutputOn: wasAuto ? false : state.fanOutputOn,
+      fault: wasAuto ? 'temperature_unavailable' : state.fault,
+      lastCommandSource: wasAuto ? 'system' : state.lastCommandSource });
+  } else {
+    state.sampleAgeMs = age;
+  }
 }
 createServer(async (req, res) => {
   const send = (code, data) => {
@@ -38,6 +54,7 @@ createServer(async (req, res) => {
     if (req.headers.host !== host || (req.headers.origin && req.headers.origin !== `http://${host}`)) {
       send(403, { error: { code: 'FORBIDDEN' } }); return;
     }
+    refreshSampleAge();
     const route = routes.get(req.url);
     if (route && ['GET', 'HEAD'].includes(req.method)) {
       const contents = await readFile(new URL(route[0], web));
@@ -73,6 +90,7 @@ createServer(async (req, res) => {
           fault: wasAuto ? 'temperature_unavailable' : state.fault,
           lastCommandSource: wasAuto ? 'system' : state.lastCommandSource });
       } else {
+        sampleTimeMs = performance.now();
         const next = { ...state, temperatureC: value.temperatureC,
           sensorStatus: 'ok', sampleAgeMs: 0, fault: 'none' };
         if (state.mode === 'auto') {

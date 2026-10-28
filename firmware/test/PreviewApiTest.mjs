@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { validState } from '../web/client.mjs';
 
 async function withServer(port, fail, check) {
   const child = spawn(process.execPath, [new URL('../tools/preview-server.mjs', import.meta.url).pathname], {
@@ -128,6 +129,30 @@ test('preview temperature injection exercises automatic hysteresis and fault rec
     assert.equal((await put('/__simulator/temperature', { temperatureC: 30 },
       { Origin: 'https://foreign.example' })).status, 403);
     assert.equal((await fetch(`${base}/__simulator/temperature`)).status, 404);
-    assert.deepEqual(await (await fetch(`${base}/api/v1/state`)).json(), beforeInvalid);
+    const afterInvalid = await (await fetch(`${base}/api/v1/state`)).json();
+    assert.deepEqual({ ...afterInvalid, sampleAgeMs: beforeInvalid.sampleAgeMs }, beforeInvalid);
+    assert.ok(afterInvalid.sampleAgeMs >= beforeInvalid.sampleAgeMs);
+
+    state = await inject(40);
+    assert.equal(state.fanOutputOn, true);
+    const beforeStaleRevision = state.revision;
+    await new Promise((resolve) => setTimeout(resolve, 5150));
+    state = await (await fetch(`${base}/api/v1/state`)).json();
+    assert.equal(state.sensorStatus, 'stale');
+    assert.equal(state.temperatureC, null);
+    assert.ok(state.sampleAgeMs > 5000);
+    assert.equal(state.mode, 'manual');
+    assert.equal(state.fanOutputOn, false);
+    assert.equal(state.fault, 'temperature_unavailable');
+    assert.equal(state.revision, beforeStaleRevision + 1);
+    assert.equal(validState(state), true);
+    assert.equal((await mode('auto')).status, 409);
+    const later = await (await fetch(`${base}/api/v1/state`)).json();
+    assert.equal(later.revision, state.revision, 'sample age alone must not change revision');
+    state = await inject(31);
+    assert.equal(state.sensorStatus, 'ok');
+    assert.equal(state.mode, 'manual');
+    assert.equal(state.fault, 'none');
+    assert.equal(validState(state), true);
   });
 });

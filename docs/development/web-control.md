@@ -30,7 +30,7 @@ node firmware/tools/preview-server.mjs
 | `firmware/web/config.mjs` | 阈值校验、独立编辑草稿与确认 |
 | `firmware/tools/preview-server.mjs` | 本机开发模拟器；不进入固件资源 |
 
-页面使用 `/api/v1/state`、`/api/v1/power`、`/api/v1/mode`、`/api/v1/config`，遵循架构的 JSON 字段与错误约定。无外部字体、CDN 或网络资源。模拟器支持手动操作、注入温度后的自动回差和内存阈值保存，没有真实 Wi-Fi、GPIO、红外或温度采集。注入温度的方法及配置故障验证见 [网页温控配置与模拟接口](web-temperature-config.md)。
+页面使用 `/api/v1/state`、`/api/v1/power`、`/api/v1/mode`、`/api/v1/config`，遵循架构的 JSON 字段与错误约定。无外部字体、CDN 或网络资源。模拟器支持手动操作、注入温度后的自动回差与样本过期、内存阈值保存，没有真实 Wi-Fi、GPIO、红外或温度采集。注入温度的方法及配置故障验证见 [网页温控配置与模拟接口](web-temperature-config.md)。
 
 后续固件需嵌入并提供五个 web 文件：`/` 为 `text/html`，`/style.css` 为 `text/css`，`/app.mjs`、`/client.mjs` 和 `/config.mjs` 为 `text/javascript`。已实现独立的 [C++ 资源生成脚本](web-assets.md)，板端构建钩子及 ESP32 路由装配仍待工具链确认。模拟标记仅由开发服务器的 `X-ESP32-Simulator: true` 响应头启用，固件不发送该标记。
 
