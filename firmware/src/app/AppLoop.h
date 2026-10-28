@@ -2,6 +2,7 @@
 
 #include "adapters/WriteApi.h"
 #include "input/ButtonDebouncer.h"
+#include "input/InfraredInput.h"
 #include "services/NetworkService.h"
 #include "services/TemperatureService.h"
 
@@ -37,11 +38,11 @@ public:
     AppLoop(std::string bootId, ConfigStore& store, OutputPort& output, DiagnosticPort& diagnostics,
             std::uint32_t debounceMs, TemperatureService* temperature = nullptr,
             NetworkService* network = nullptr, ApiPort* api = nullptr,
-            WritePolicy trustedPolicy = WritePolicy{});
+            WritePolicy trustedPolicy = WritePolicy{}, InfraredInput* infrared = nullptr);
     // Idempotent; storage load occurs only after hardware OFF initialization.
     void start();
     // Caller supplies normalized button level and one monotonic clock sample.
-    // Temperature -> health -> network -> button -> one API -> final outputs.
+    // Temperature -> health -> network -> button -> one IR frame -> one API -> final outputs.
     bool step(std::uint32_t nowMs, bool buttonPressed);
     DeviceState snapshot() const;
 private:
@@ -53,6 +54,7 @@ private:
     TemperatureService* temperature_;
     NetworkService* network_;
     ApiPort* api_;
+    InfraredInput* infrared_;
     WritePolicy trustedPolicy_;
     WritePolicy activePolicy_;
     bool started_ = false;

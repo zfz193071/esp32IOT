@@ -77,7 +77,11 @@ CommandResult FanController::setMode(Mode mode, CommandSource source) {
 }
 
 CommandResult FanController::toggleFromButton() {
-    return setPower(!state_.fanOutputOn, CommandSource::Button);
+    return togglePower(CommandSource::Button);
+}
+
+CommandResult FanController::togglePower(CommandSource source) {
+    return setPower(!state_.fanOutputOn, source);
 }
 
 void FanController::setWifiConnected(bool connected) {

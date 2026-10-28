@@ -69,6 +69,7 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/src" \
     "$firmware_dir/src/app/AppLoop.cpp" \
+    "$firmware_dir/src/input/InfraredInput.cpp" \
     "$firmware_dir/src/services/NetworkService.cpp" \
     "$firmware_dir/src/services/TemperatureService.cpp" \
     "$firmware_dir/src/input/ButtonDebouncer.cpp" \
@@ -79,5 +80,12 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
     "$firmware_dir/test/AppLoopTest.cpp" \
     -o "$build_dir/app-loop-test"
 "$build_dir/app-loop-test"
+
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" \
+    "$firmware_dir/src/input/InfraredInput.cpp" \
+    "$firmware_dir/test/InfraredInputTest.cpp" \
+    -o "$build_dir/infrared-input-test"
+"$build_dir/infrared-input-test"
 
 node --test "$firmware_dir/test/WebClientTest.mjs" "$firmware_dir/test/ConfigDraftTest.mjs" "$firmware_dir/test/WebAssetsTest.mjs" "$firmware_dir/test/StateApiTest.mjs"

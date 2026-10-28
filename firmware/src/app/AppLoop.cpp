@@ -4,9 +4,9 @@
 namespace esp32fan {
 AppLoop::AppLoop(std::string bootId, ConfigStore& store, OutputPort& output, DiagnosticPort& diagnostics,
                  std::uint32_t debounceMs, TemperatureService* temperature,
-                 NetworkService* network, ApiPort* api, WritePolicy trustedPolicy)
+                 NetworkService* network, ApiPort* api, WritePolicy trustedPolicy, InfraredInput* infrared)
     : store_(store), output_(output), diagnostics_(diagnostics), controller_(std::move(bootId)),
-      button_(debounceMs), temperature_(temperature), network_(network), api_(api),
+      button_(debounceMs), temperature_(temperature), network_(network), api_(api), infrared_(infrared),
       trustedPolicy_(std::move(trustedPolicy)), activePolicy_(trustedPolicy_) {}
 
 void AppLoop::start() {
@@ -39,6 +39,15 @@ bool AppLoop::step(std::uint32_t nowMs, bool buttonPressed) {
         if (update.diagnostic != NetworkDiagnostic::None) diagnostics_.network(update);
     }
     if (button_.update(buttonPressed, nowMs)) controller_.toggleFromButton();
+
+    if (infrared_) {
+        switch (infrared_->update(nowMs)) {
+        case InfraredAction::On: controller_.setPower(true, CommandSource::Infrared); break;
+        case InfraredAction::Off: controller_.setPower(false, CommandSource::Infrared); break;
+        case InfraredAction::Toggle: controller_.togglePower(CommandSource::Infrared); break;
+        case InfraredAction::None: break;
+        }
+    }
 
     WriteRequest request;
     StateResponse response;

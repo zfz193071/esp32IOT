@@ -75,6 +75,19 @@ struct Network : NetworkPort {
     std::string address() override { return ip; }
     void disconnect() override { link = NetworkLink::Disconnected; }
 };
+struct Infrared : InfraredPort {
+    std::deque<InfraredFrame> frames;
+    bool takeFrame(InfraredFrame& frame) override {
+        if (frames.empty()) return false;
+        frame = frames.front(); frames.pop_front(); return true;
+    }
+    void press(std::uint32_t now, bool repeat = false) {
+        InfraredFrame frame;
+        frame.protocol = 7; frame.address = 42; frame.command = 9;
+        frame.receivedAtMs = now; frame.valid = true; frame.repeat = repeat;
+        frames.push_back(frame);
+    }
+};
 WriteRequest request(const std::string& path, const std::string& body, const std::string& ip = "192.168.1.20") {
     WriteRequest req;
     req.method = "PUT"; req.path = path; req.body = body;
@@ -167,5 +180,34 @@ int main() {
     local.step(30, true); local.step(50, true);
     check(localOut.fan && localOut.led && !local.snapshot().wifiConnected,
           "local-only assembly requires no network, temperature or API ports");
+    Outputs irOutput;
+    Storage irDisk(irOutput);
+    ConfigStore irStore(irDisk);
+    Diagnostics irLog;
+    Api irApi(irOutput);
+    Infrared remote;
+    InfraredBinding toggle;
+    toggle.protocol = 7; toggle.address = 42; toggle.command = 9; toggle.action = InfraredAction::Toggle;
+    InfraredInput irInput(remote, {toggle});
+    WritePolicy trusted;
+    trusted.allowedOrigins = {"http://192.168.1.20"};
+    AppLoop irApp("infrared-app", irStore, irOutput, irLog, 20, nullptr, nullptr, &irApi, trusted, &irInput);
+    irApp.start(); irApp.step(0, false); irApp.step(20, false);
+    remote.press(30); irApp.step(30, false);
+    check(irOutput.fan && irApp.snapshot().lastCommandSource == CommandSource::Infrared,
+          "infrared toggle uses the unified controller and records source");
+    irApp.step(40, true); irApp.step(60, true);
+    check(!irOutput.fan && irApp.snapshot().lastCommandSource == CommandSource::Button,
+          "physical button can take over an infrared output");
+    remote.press(100, true); irApp.step(100, true);
+    check(!irOutput.fan && irApp.snapshot().lastCommandSource == CommandSource::Button,
+          "held IR repeat cannot undo a later manual button command");
+    remote.press(350);
+    irApi.requests.push_back(request("/api/v1/power", "{\"on\":false}"));
+    const auto irWrites = irOutput.writes.size();
+    irApp.step(350, false);
+    check(!irOutput.fan && irOutput.writes.size() == irWrites &&
+              irApp.snapshot().lastCommandSource == CommandSource::Web,
+          "same-cycle IR then API applies final output only, with no transient on pulse");
     std::cout << "PASS: AppLoop startup, bounded scheduling, final outputs and API integration (host only)\n";
 }

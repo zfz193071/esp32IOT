@@ -40,6 +40,7 @@ public:
     CommandResult setPower(bool on, CommandSource source);
     CommandResult setMode(Mode mode, CommandSource source);
     CommandResult toggleFromButton();
+    CommandResult togglePower(CommandSource source);
     void setWifiConnected(bool connected);
     SaveResult setConfig(ConfigStore& store, const TemperatureConfig& config);
     // Call tick(nowMs) before processing commands each loop; uint32 clock wraps.
