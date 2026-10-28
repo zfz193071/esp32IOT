@@ -19,6 +19,7 @@
 - [网页温控配置与模拟接口](docs/development/web-temperature-config.md)：草稿保护、保存确认与存储失败模拟。
 - [网页编入 C++ 固件](docs/development/web-assets.md)：资源生成、路由表与字节一致性验证。
 - [真实 ESP32 联调流程](docs/development/esp32-bringup.md)：从 USB 烧录、串口日志到实物风扇联调。
+- [从零运行与排障指南](docs/development/from-zero.md)：当前可执行命令、实物接入顺序与故障定位。
 
 - [C++ 状态响应与网页契约](docs/development/state-api.md)：状态 JSON、空值、安全整数与响应头要求。
 
