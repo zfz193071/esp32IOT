@@ -2,15 +2,17 @@
 
 以已购买的 ESP32 升级版学习套件为基础，逐步实现按键、红外遥控、局域网网页控制和温度自动控制。
 
-当前阶段：硬件核对等待实物与商家资料；已实现硬件无关的手动控制器并通过电脑端测试。尚未完成板端固件接入、接线验证或设备烧录。
+当前阶段：硬件核对等待实物确认与商家资料；已实现硬件无关的手动控制器和按键消抖，提供电脑端测试。尚未完成板端固件接入、接线验证或设备烧录。
 
 ## 设计入口
 
 - [系统架构与开发边界](docs/architecture.md)
 - [交互式架构图](.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html)
 - [硬件核对清单](docs/hardware.md)
+- [六张图片核对与工单开发范围](docs/hardware-image-review.md)
 - [全部工单与执行顺序](docs/issues/README.md)：25 张必需工单、7 张后续扩展规划单。
 - [手动控制器开发与测试](docs/development/domain.md)：运行 `sh firmware/test/run-host-tests.sh`，无需连接硬件。
+- [按键消抖开发与测试](docs/development/button-input.md)：同一测试入口，覆盖长按、抖动、启动按住与计时回绕。
 
 第一版 MVP 到 M4：手机在同一 Wi-Fi 下打开 ESP32 提供的网页，控制小风扇，并同步按键、红外操作后的控制状态。M5 增加温控，M6 完成异常场景验收。
 
