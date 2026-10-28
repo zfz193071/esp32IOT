@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-10-28T02:58:32.312Z",
+  "specification": {
+    "path": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/candidate.json",
+    "sha256": "ecd0a95661ecd34050270fbf370173ba214f900d121e83e73c2a93ca34ffd319",
+    "bytes": 3292
+  },
+  "artifact": {
+    "path": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+    "sha256": "0f63afc4f11c03d691b8b5fbb1fd3bc9ee747000ca2f09e897e024d1b3530326",
+    "bytes": 823712
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "/Users/zhuwenfang/.nvm/versions/node/v22.19.0/bin/node",
+        "/Users/zhuwenfang/.agents/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/candidate.json",
+        "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "ecd0a95661ecd34050270fbf370173ba214f900d121e83e73c2a93ca34ffd319",
+          "bytes": 3292
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 932,
+      "command": [
+        "/Users/zhuwenfang/.nvm/versions/node/v22.19.0/bin/node",
+        "/Users/zhuwenfang/.agents/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/candidate.json",
+        "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "f38e745d-d2cc-4b08-ae75-b715dc48de17",
+        "ok": true,
+        "command": "deliver",
+        "type": "architecture",
+        "input": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/candidate.json",
+        "output": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+        "specification": {
+          "sha256": "ecd0a95661ecd34050270fbf370173ba214f900d121e83e73c2a93ca34ffd319",
+          "bytes": 3292
+        },
+        "artifact": {
+          "sha256": "0f63afc4f11c03d691b8b5fbb1fd3bc9ee747000ca2f09e897e024d1b3530326",
+          "bytes": 823712
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 352,
+      "command": [
+        "/Users/zhuwenfang/.nvm/versions/node/v22.19.0/bin/node",
+        "/Users/zhuwenfang/.agents/skills/archify/bin/archify.mjs",
+        "check",
+        "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+        "artifact": {
+          "sha256": "0f63afc4f11c03d691b8b5fbb1fd3bc9ee747000ca2f09e897e024d1b3530326",
+          "bytes": 823712
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "metrics": {
+            "properCrossings": 0,
+            "resolvedCrossovers": 0,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 0,
+            "labelCanvasOverflowIssues": 0,
+            "minLabelRouteClearance": 20,
+            "desktopReadabilityIssues": 0,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 7.5,
+            "maxBends": 2,
+            "routesOverSuggestedBends": 0,
+            "maxStretch": 1,
+            "routesOverSuggestedStretch": 0,
+            "minSegmentPx": 77.5,
+            "minInteriorSegmentPx": 218,
+            "shortSegmentCount": 0,
+            "shortEndpointSegmentCount": 0,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [],
+            "detours": []
+          },
+          "leadingSpace": {
+            "measured": true,
+            "emptyTopPx": 40,
+            "emptyTopRatio": 0.063,
+            "occupiedTop": 40,
+            "viewBoxTop": 0,
+            "canvasHeight": 638,
+            "typicalNodeHeight": 80,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "recognized-declared-wide",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 975,
+            "actualBudgetPx": 975,
+            "actualReaderWidth": 1005,
+            "desiredReaderWidth": 1005,
+            "viewportCap": 1376,
+            "limit": "source-size",
+            "requestedTargetPx": 7.5,
+            "requestedTargetMet": true,
+            "hardFloorPx": 6,
+            "hardFloorMet": true,
+            "minimumOwner": {
+              "kind": "edge",
+              "id": "http",
+              "from": "phone",
+              "to": "web"
+            },
+            "minimumSourceTextPx": 8,
+            "minimumProjectedTextPx": 7.5,
+            "semanticTextCount": 28
+          },
+          "issues": []
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "f38e745d-d2cc-4b08-ae75-b715dc48de17"
+      }
+    },
+    "browser-check": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": 773,
+      "command": [
+        "/Users/zhuwenfang/.nvm/versions/node/v22.19.0/bin/node",
+        "/Users/zhuwenfang/.agents/skills/archify/bin/archify.mjs",
+        "browser-check",
+        "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+        "--json",
+        "--require-provenance"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "fail",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "f38e745d-d2cc-4b08-ae75-b715dc48de17",
+        "artifact": {
+          "path": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+          "sha256": "0f63afc4f11c03d691b8b5fbb1fd3bc9ee747000ca2f09e897e024d1b3530326",
+          "bytes": 823712
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "available",
+          "executable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        },
+        "diagnostics": [
+          {
+            "code": "viewer/browser-check-runtime",
+            "severity": "error",
+            "message": "browser-check could not complete its Chrome inspection.",
+            "subject": {
+              "artifact": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html"
+            },
+            "evidence": {
+              "reason": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v22.19.0, libuv 1.51.0, darwin; pid=76792, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+            },
+            "supportedFixes": [
+              "resolve the reported Chrome inspection error, then rerun browser-check"
+            ]
+          }
+        ],
+        "containment": {
+          "status": "fail",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": []
+        },
+        "themeStates": {
+          "status": "fail",
+          "viewports": []
+        },
+        "readability": {
+          "status": "fail",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": []
+        },
+        "viewerChrome": {
+          "status": "fail",
+          "viewports": []
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "receipt": "esp32-fan.browser-check.json",
+          "files": []
+        },
+        "error": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v22.19.0, libuv 1.51.0, darwin; pid=76792, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      }
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "viewer/browser-check-runtime",
+      "severity": "error",
+      "message": "browser-check could not complete its Chrome inspection.",
+      "subject": {
+        "artifact": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html"
+      },
+      "evidence": {
+        "reason": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v22.19.0, libuv 1.51.0, darwin; pid=76792, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      },
+      "supportedFixes": [
+        "resolve the reported Chrome inspection error, then rerun browser-check"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.finalize.json",
+    "summaryReceipt": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.finalize-summary.json",
+    "browserCheckReceipt": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "browser-check",
+  "finishedAt": "2026-10-28T02:58:34.839Z",
+  "durationMs": 2527,
+  "update": {
+    "status": "unavailable",
+    "installedVersion": null,
+    "availableVersion": null,
+    "releaseNotes": null,
+    "checkedAt": null,
+    "source": null,
+    "noticeRequired": false,
+    "noticeText": null,
+    "reason": "cache-unavailable"
+  }
+}

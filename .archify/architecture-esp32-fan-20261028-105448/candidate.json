@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ESP32 桌面风扇 · MVP 目标架构",
+    "locale": "zh-CN",
+    "output": ".archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {"id":"phone","type":"frontend","label":"手机控制网页","sublabel":"同一 Wi-Fi · 每秒同步","pos":[40,40],"size":[200,70]},
+    {"id":"web","type":"backend","label":"网页与 HTTP 接口","sublabel":"校验命令 · 返回状态","pos":[395,40],"size":[220,70]},
+    {"id":"network","type":"backend","label":"Wi-Fi 连接管理","sublabel":"后台重连 · 本地不阻塞","pos":[780,40],"size":[220,70]},
+    {"id":"local","type":"external","label":"按键与红外入口","sublabel":"消抖 · 解码 · 过滤重复","pos":[40,265],"size":[200,80]},
+    {"id":"controller","type":"backend","label":"统一风扇控制器","sublabel":"手动 / 自动 · 单一状态","pos":[395,265],"size":[220,80]},
+    {"id":"config","type":"database","label":"温控配置存储","sublabel":"只保存阈值 · 不恢复开机","pos":[780,265],"size":[220,80]},
+    {"id":"sensor","type":"external","label":"温度采集适配器","sublabel":"M5 · 有效性与过期检查","pos":[40,490],"size":[200,80]},
+    {"id":"output","type":"backend","label":"电机输出适配器","sublabel":"GPIO 与极性待实物核对","pos":[395,490],"size":[220,80]},
+    {"id":"fan","type":"external","label":"驱动电路与小风扇","sublabel":"低压负载 · 驱动待确认","pos":[780,490],"size":[220,80]}
+  ],
+  "connections": [
+    {"id":"http","from":"phone","to":"web","label":"HTTP 请求"},
+    {"id":"reply","from":"web","to":"phone","label":"页面 / 状态"},
+    {"id":"connectivity","from":"network","to":"web","label":"连接状态"},
+    {"id":"commands","from":"web","to":"controller","label":"命令 / 查询"},
+    {"id":"snapshot","from":"controller","to":"web","label":"统一快照"},
+    {"id":"local-input","from":"local","to":"controller","label":"手动命令"},
+    {"id":"thresholds","from":"controller","to":"config","label":"读写阈值"},
+    {"id":"samples","from":"sensor","to":"controller","label":"温度 / 健康"},
+    {"id":"drive","from":"controller","to":"output","label":"唯一输出决策","variant":"emphasis"},
+    {"id":"motor","from":"output","to":"fan","label":"驱动控制信号","variant":"emphasis"}
+  ],
+  "cards": [
+    {"dot":"cyan","title":"部署边界","items":["目标设计，尚未实现固件或验证接线。","网页、接口和控制逻辑运行在 ESP32；电脑仅负责开发和烧录。","手机经局域网路由器访问设备，不需要云服务。"]},
+    {"dot":"emerald","title":"控制权与故障策略","items":["上电默认手动关闭；所有入口经过同一控制器。","手动开关覆盖自动模式；温控使用双阈值回差。","自动模式温度异常时关闭并转手动；断网保持本地控制。"]},
+    {"dot":"amber","title":"交付边界","items":["M4 完成局域网遥控；M5 加入温控和配置持久化。","输出状态不是实际转速反馈；电机驱动、电压和引脚必须先核对。","调速、MQTT、云端与 OTA 留待后续；详细接口见 docs/architecture.md。"]}
+  ]
+}

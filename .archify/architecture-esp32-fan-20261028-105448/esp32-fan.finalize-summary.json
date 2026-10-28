@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/candidate.json",
+    "sha256": "ecd0a95661ecd34050270fbf370173ba214f900d121e83e73c2a93ca34ffd319",
+    "bytes": 3292
+  },
+  "artifact": {
+    "path": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+    "sha256": "0f63afc4f11c03d691b8b5fbb1fd3bc9ee747000ca2f09e897e024d1b3530326",
+    "bytes": 823712
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "fail"
+  },
+  "failedStage": "browser-check",
+  "diagnostics": [
+    {
+      "code": "viewer/browser-check-runtime",
+      "severity": "error",
+      "message": "browser-check could not complete its Chrome inspection.",
+      "subject": {
+        "artifact": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html"
+      },
+      "evidence": {
+        "reason": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v22.19.0, libuv 1.51.0, darwin; pid=76792, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      },
+      "supportedFixes": [
+        "resolve the reported Chrome inspection error, then rerun browser-check"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.finalize.json",
+    "summaryReceipt": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.finalize-summary.json",
+    "browserCheckReceipt": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2527
+}

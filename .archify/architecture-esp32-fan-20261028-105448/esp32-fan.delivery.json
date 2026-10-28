@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "6a110411-46b2-4706-9fbc-c4be11f21f06",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/candidate.json",
+  "output": "/Users/zhuwenfang/a-working/esp32IOT/.archify/architecture-esp32-fan-20261028-105448/esp32-fan.html",
+  "specification": {
+    "sha256": "ecd0a95661ecd34050270fbf370173ba214f900d121e83e73c2a93ca34ffd319",
+    "bytes": 3292
+  },
+  "artifact": {
+    "sha256": "0f63afc4f11c03d691b8b5fbb1fd3bc9ee747000ca2f09e897e024d1b3530326",
+    "bytes": 823712
+  }
+}
