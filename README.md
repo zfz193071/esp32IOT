@@ -1,5 +1,7 @@
 # ESP32 桌面智能风扇
 
+[简体中文](README.md) | [English](README.en.md)
+
 以已购买的 ESP32 升级版学习套件为基础，逐步实现按键、红外遥控、局域网网页控制和温度自动控制。
 
 当前阶段：硬件核对等待实物确认与商家资料；已实现主循环软件装配、手动控制器、按键消抖、红外映射与重复帧过滤、手机控制页面、C++ 状态响应与写处理、请求协调、网页温控配置、采集／网络调度与自动控制规则，通过主机或模拟测试。尚未完成板端固件接入、持久化适配、接线验证或设备烧录。
@@ -22,19 +24,12 @@
 - [网页编入 C++ 固件](docs/development/web-assets.md)：资源生成、路由表与字节一致性验证。
 - [真实 ESP32 联调流程](docs/development/esp32-bringup.md)：从 USB 烧录、串口日志到实物风扇联调。
 - [从零运行与排障指南](docs/development/from-zero.md)：当前可执行命令、实物接入顺序与故障定位。
-
 - [C++ 状态响应与网页契约](docs/development/state-api.md)：状态 JSON、空值、安全整数与响应头要求。
-
 - [C++ 写请求与控制器接入](docs/development/write-api.md)：严格 JSON、同源校验与配置保存。
-
 - [非阻塞温度采集调度](docs/development/temperature-service.md)：驱动契约、转换超时、采样健康与主循环顺序。
-
 - [Wi-Fi 连接与限频重试](docs/development/network-service.md)：连接超时、IP 事件、私有配置与断网行为。
-
 - [主循环装配与最终输出](docs/development/app-loop.md)：启动关闭、有限 API 处理与一致输出。
-
 - [红外输入与重复帧过滤](docs/development/infrared-input.md)：精确映射、长按过滤、时间戳与板端解码契约。
-
 - [软件回归覆盖与实物验证边界](docs/development/regression.md)：统一测试入口、可选 HTTP 模拟测试及手工验收步骤。
 - [输入压力与连续运行验收](docs/development/pressure-validation.md)：主机调度压力测试与实物记录模板。
 - [首版交付准备清单](docs/delivery/handoff.md)：已有软件证据、发布门槛与待补的固件记录。
