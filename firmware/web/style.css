@@ -1,0 +1,33 @@
+:root { font-family: system-ui, -apple-system, "PingFang SC", sans-serif; color: #173c35; background: #f1f5f1; line-height: 1.6; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 540px; margin: auto; padding: 32px 18px; }
+header { padding: 0 6px 20px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: #506b61; }
+h1 { font-size: 34px; margin: 8px 0 0; letter-spacing: -.04em; }
+header p { margin: 4px 0; color: #506b61; }
+.card { background: #fff; border: 1px solid #dce5df; border-radius: 22px; padding: 24px; margin-bottom: 16px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+h2 { margin: 0; font-size: 16px; }
+.badge { border-radius: 20px; padding: 3px 10px; background: #edf1ee; font-size: 12px; }
+.badge.online { background: #def2e8; color: #176245; }
+.output { font-size: 60px; font-weight: 650; line-height: 1.3; margin-top: 16px; }
+#freshness { margin: 0 0 20px; font-size: 13px; color: #506b61; }
+.buttons { display: flex; gap: 10px; margin-top: 16px; }
+button { font: inherit; border: 1px solid transparent; cursor: pointer; min-height: 48px; border-radius: 12px; padding: 10px 14px; color: white; background: #225c49; }
+.buttons button { flex: 1; }
+button.secondary { color: #225c49; background: #eef4ef; border-color: #dce5df; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible { outline: 3px solid #ba7b25; outline-offset: 3px; }
+.hint, #last-sync, footer { color: #53685f; font-size: 12px; }
+.hint { margin-bottom: 0; }
+dl { margin-bottom: 0; font-size: 14px; }
+dl div { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid #edf1ee; }
+dt { color: #53685f; } dd { margin: 0; text-align: right; }
+.status { padding: 2px 8px; font-size: 14px; overflow-wrap: anywhere; }
+.status p { margin: 5px 0; }
+.text-button { background: transparent; color: #225c49; padding-left: 0; text-decoration: underline; }
+footer { text-align: center; padding-top: 18px; }
+aside, #fault { background: #fff1d8; color: #755016; padding: 12px; border-radius: 12px; font-size: 13px; margin-bottom: 16px; }
+[hidden] { display: none !important; }
+@media (max-width: 360px) { .card { padding: 18px; } main { padding: 22px 12px; } button { padding: 10px; } }

@@ -19,3 +19,5 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
     "$firmware_dir/test/ButtonDebouncerTest.cpp" \
     -o "$build_dir/button-debouncer-test"
 "$build_dir/button-debouncer-test"
+
+node --test "$firmware_dir/test/WebClientTest.mjs"

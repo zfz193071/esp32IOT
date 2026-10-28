@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>桌面风扇控制</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <main>
+    <header><span class="eyebrow">ESP32 · 局域网控制</span><h1>桌面风扇</h1>
+      <p>轻触控制，让桌面舒适一点。</p></header>
+    <aside id="demo" hidden>模拟设备预览 · 所有操作只影响模拟数据</aside>
+    <section class="card" aria-labelledby="output-title">
+      <div class="row"><h2 id="output-title">控制输出</h2><span id="connection" class="badge">连接中</span></div>
+      <div id="output" class="output">—</div>
+      <p id="freshness">等待首次同步</p>
+      <div class="buttons"><button id="power-on" disabled>开启输出</button><button id="power-off" class="secondary" disabled>关闭输出</button></div>
+      <p class="hint">开关操作会切换至手动模式。输出状态不代表已检测到风扇转动。</p>
+    </section>
+    <section class="card" aria-labelledby="mode-title">
+      <div class="row"><h2 id="mode-title">运行模式</h2><strong id="mode">—</strong></div>
+      <div class="buttons"><button id="manual" class="secondary" disabled>手动控制</button><button id="auto" class="secondary" disabled>自动温控</button></div>
+      <p class="hint">切换手动模式会保持当前输出；要停止输出，请点“关闭输出”。</p>
+      <dl><div><dt>温度</dt><dd id="temperature">不可用</dd></div><div><dt>自动阈值</dt><dd id="thresholds">—</dd></div><div><dt>最近控制来源</dt><dd id="source">—</dd></div></dl>
+      <p id="temperature-hint" class="hint">温度未就绪时，自动模式不可用。</p>
+      <p id="fault" hidden>温度异常，自动控制已退出。温度恢复后不会自动重新开启。</p>
+    </section>
+    <section class="status" aria-label="同步状态"><p id="message" role="status" aria-live="polite">正在连接设备…</p>
+      <p id="last-sync">尚未同步</p><button id="refresh" class="text-button">重新同步</button></section>
+    <footer>手机与设备需连接同一 Wi-Fi</footer>
+  </main>
+</body>
+</html>

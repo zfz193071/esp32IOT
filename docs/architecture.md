@@ -1,6 +1,6 @@
 # ESP32 智能风扇架构
 
-状态：面向实现的设计方案；ESP-005 的消抖逻辑与 ESP-006 的手动控制器已实现并通过主机测试，尚未接入板端固件。依据：已讨论的 MVP 计划与套件商品图。文中的接口、周期、异常策略是本项目的设计默认值；GPIO、板型和驱动参数仍待实物确认。
+状态：面向实现的设计方案；消抖、手动控制器、手机页面与请求协调已通过主机或模拟测试，尚未接入板端固件。依据：已讨论的 MVP 计划与套件商品图。文中的接口、周期、异常策略是本项目的设计默认值；GPIO、板型和驱动参数仍待实物确认。
 
 ## 1. 目标与范围
 
@@ -102,7 +102,7 @@ FanController 不依赖 Wi-Fi、HTTP、红外库或具体 GPIO。硬件和通信
 
 ## 7. 计划目录
 
-以下是实现目录约定，目前已创建架构文档、图及 `firmware/src/domain`、`firmware/src/input`、`firmware/test`；其余目录与模块按后续工单实施，不放置假引脚或空实现文件：
+以下是实现目录约定，目前已创建架构文档、图及 `firmware/src/domain`、`firmware/src/input`、`firmware/web`、`firmware/tools`、`firmware/test`；其余目录与模块按后续工单实施，不放置假引脚或空实现文件：
 
 ```text
 esp32IOT/
@@ -111,7 +111,7 @@ esp32IOT/
 │   ├── architecture.md       # 本设计与接口契约
 │   └── hardware.md           # 接线核对与待确认项
 ├── .archify/                # 架构图及可编辑源文件
-└── firmware/                # 已有 domain 与主机测试，其余待实现
+└── firmware/                # 板端装配待实现
     ├── src/
     │   ├── main.cpp         # 装配模块与主循环
     │   ├── domain/          # FanController、命令、状态、温控规则
@@ -119,6 +119,7 @@ esp32IOT/
     │   ├── adapters/        # 按键、红外、Web、电机、温度
     │   └── platform/        # Wi-Fi、时钟、持久化、板卡配置
     ├── web/                 # 原生网页源文件，构建时嵌入固件
+    ├── tools/               # 本机模拟设备预览工具
     ├── config/              # 配置样例；私有配置忽略提交
     └── test/                # 控制器规则测试与硬件验收说明
 ```

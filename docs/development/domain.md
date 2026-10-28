@@ -10,7 +10,7 @@
 sh firmware/test/run-host-tests.sh
 ```
 
-脚本使用本机 `c++`（可通过 `CXX` 指定编译器），启用 `-std=c++11 -Wall -Wextra -Wpedantic -Werror`，在临时目录编译并运行，结束后清理产物。无需 CMake 或第三方库。2026-10-28 在 Apple clang 15.0.0 上通过；这不表示已通过 ESP32 编译或实物验收。
+脚本使用本机 `c++`（可通过 `CXX` 指定编译器），启用 `-std=c++11 -Wall -Wextra -Wpedantic -Werror`，在临时目录编译并运行，结束后清理产物；统一入口也运行网页测试，需要 Node.js。无需 CMake 或第三方库。2026-10-28 在 Apple clang 15.0.0 上通过；这不表示已通过 ESP32 编译或实物验收。
 
 ## 命令与状态约定
 
