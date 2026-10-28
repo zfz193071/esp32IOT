@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include "config/ConfigStore.h"
 
 namespace esp32fan {
 
@@ -33,13 +34,14 @@ struct DeviceState {
 class FanController {
 public:
     // App supplies a non-empty ID unique to this boot. No hardware access here.
-    explicit FanController(std::string bootId);
+    explicit FanController(std::string bootId, TemperatureConfig config = TemperatureConfig{});
 
     DeviceState snapshot() const;
     CommandResult setPower(bool on, CommandSource source);
     CommandResult setMode(Mode mode, CommandSource source);
     CommandResult toggleFromButton();
     void setWifiConnected(bool connected);
+    SaveResult setConfig(ConfigStore& store, const TemperatureConfig& config);
 
 private:
     void acceptManual(bool on, CommandSource source);

@@ -16,8 +16,12 @@ bool validSource(CommandSource source) {
 }
 } // namespace
 
-FanController::FanController(std::string bootId) {
+FanController::FanController(std::string bootId, TemperatureConfig config) {
     state_.bootId = std::move(bootId);
+    if (validConfig(config)) {
+        state_.onThresholdC = config.onThresholdC;
+        state_.offThresholdC = config.offThresholdC;
+    }
 }
 
 DeviceState FanController::snapshot() const {
@@ -67,6 +71,18 @@ void FanController::setWifiConnected(bool connected) {
         state_.wifiConnected = connected;
         ++state_.revision;
     }
+}
+
+SaveResult FanController::setConfig(ConfigStore& store, const TemperatureConfig& config) {
+    const auto result = store.save(config);
+    if (result == SaveResult::Saved || result == SaveResult::Unchanged) {
+        if (state_.onThresholdC != config.onThresholdC || state_.offThresholdC != config.offThresholdC) {
+            state_.onThresholdC = config.onThresholdC;
+            state_.offThresholdC = config.offThresholdC;
+            ++state_.revision;
+        }
+    }
+    return result;
 }
 
 } // namespace esp32fan
