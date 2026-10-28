@@ -1,1 +1,3 @@
 /firmware/build/
+
+/firmware/config/wifi.local.h
