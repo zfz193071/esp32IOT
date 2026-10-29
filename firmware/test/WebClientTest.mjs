@@ -203,3 +203,39 @@ test('storage failure never reports acceptance or changes confirmed configuratio
   assert.equal(h.client.state.offThresholdC, 28);
   assert.match(h.client.message, /保存失败/);
 });
+
+test('a reboot observed in a write response retires the old boot before resynchronizing', async () => {
+  const h = harness(); await connect(h);
+  const write = h.client.write('power', true);
+  h.calls[1].resolve(response(state({ bootId: 'boot-b', revision: 1, fanOutputOn: true })));
+  await settle();
+  // A stale proxy/transport reply must not restore connectivity to boot-a,
+  // even though boot-b's state is not accepted as confirmation of this command.
+  h.calls[2].resolve(response(state({ revision: 99, fanOutputOn: true })));
+  assert.equal(await write, false);
+  assert.equal(h.client.connected, false);
+  assert.equal(h.client.state.revision, 0);
+  assert.equal(await h.client.write('power', false), false);
+  const recovery = h.client.refresh();
+  h.calls[3].resolve(response(state({ bootId: 'boot-b' })));
+  assert.equal(await recovery, true);
+  assert.equal(h.client.state.bootId, 'boot-b');
+  assert.equal(h.client.state.fanOutputOn, false);
+  assert.equal(h.calls.filter((c) => c.init.method === 'PUT').length, 1);
+});
+
+test('a retired boot in a write response does not retire the current boot', async () => {
+  const h = harness(); await connect(h);
+  const reboot = h.client.refresh();
+  h.calls[1].resolve(response(state({ bootId: 'boot-b' })));
+  await reboot;
+  const write = h.client.write('power', true);
+  h.calls[2].resolve(response(state({ revision: 100, fanOutputOn: true })));
+  await settle();
+  h.calls[3].resolve(response(state({ bootId: 'boot-b', revision: 1 })));
+  assert.equal(await write, false);
+  assert.equal(h.client.connected, true);
+  assert.equal(h.client.state.bootId, 'boot-b');
+  assert.equal(h.client.state.fanOutputOn, false);
+  assert.match(h.client.message, /旧响应/);
+});

@@ -130,8 +130,13 @@ export class DeviceClient {
       const next = await this.request(`/api/v1/${kind}`, { method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(kind === 'power' ? { on: value } : kind === 'config' ? value : { mode: value }) });
-      if (next.bootId !== this.state.bootId) {
+      if (this.retiredBoots.has(next.bootId)) {
+        notice = '收到旧响应，结果待同步';
+      } else if (next.bootId !== this.state.bootId) {
         // A write crossing a reboot cannot establish that the requested action won.
+        // Remember the observed restart even before its confirming GET succeeds.
+        this.retiredBoots.add(this.state.bootId);
+        this.connected = false;
         notice = '设备在请求期间重启；命令不重发';
       } else if (this.apply(next)) {
         accepted = true;
