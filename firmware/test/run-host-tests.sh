@@ -111,6 +111,13 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
     -o "$build_dir/app-loop-pressure-test"
 "$build_dir/app-loop-pressure-test"
 
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" \
+    "$firmware_dir/src/adapters/TextDiagnostics.cpp" \
+    "$firmware_dir/test/TextDiagnosticsTest.cpp" \
+    -o "$build_dir/text-diagnostics-test"
+"$build_dir/text-diagnostics-test"
+
 node --test "$firmware_dir/test/WebClientTest.mjs" "$firmware_dir/test/ConfigDraftTest.mjs" "$firmware_dir/test/WebAssetsTest.mjs" "$firmware_dir/test/StateApiTest.mjs" "$firmware_dir/test/ReleaseReadinessTest.mjs"
 
 if [ "$with_preview" = true ]; then

@@ -37,7 +37,19 @@ ApiPort 只交付 API 路由。静态页面由 HTTP 适配器使用已生成的 
 
 风扇与 LED 读取同一最终快照。只在输出值变化时调用 setFan 和 setIndicator，避免空闲循环重复写；这些接口表示已提交的控制信号，不代表测到风扇转动。
 
-DiagnosticPort 接收启动加载结果、温度错误、网络事件，以及模式／输出／故障／命令来源／阈值变化。相同状态、仅采样年龄或温度数值变化不会逐循环打印状态日志。诊断端口应采用非阻塞或有限写入，不能因串口终端关闭而阻塞控制。当前尚无具体串口格式或日志队列实现。
+DiagnosticPort 接收启动加载结果、温度错误、网络事件，以及模式／输出／故障／命令来源／阈值变化。相同状态、仅采样年龄或温度数值变化不会逐循环打印状态日志。
+
+`adapters/TextDiagnostics.h/.cpp` 实现可复用的文本诊断格式。构造 `TextDiagnostics(sink)` 后作为 AppLoop 的 DiagnosticPort 传入；板端只需实现 `DiagnosticSink::tryWriteLine`。每次调用传入一整行（不带换行符），输出端必须立即接受或返回 false，不可等待串口读者；适配器不重试、不积压日志，失败累计到 `droppedLines()`（达到 uint32 最大值后饱和）。实际串口的有界缓冲与发送预算仍待板端实现。
+
+日志示例：
+
+```text
+startup config=missing_defaults boot=boot-1 revision=0 mode=manual output=off source=system fault=none on_c=30 off_c=28
+network event=connected connected=true ip=192.168.1.2
+temperature event=timeout
+```
+
+启动日志区分已加载、缺失、损坏、格式版本不匹配和读取失败；状态日志记录模式、控制输出、命令来源、故障和阈值。网络断开时 IP 输出 `-`，不继续展示旧地址。无诊断事件时不输出；bootId 和地址限制为 128 字符并替换空白及控制字符，避免一条事件变成多行。此接口不接收 Wi-Fi 密码。它记录 AppLoop 产生的最终状态变化，不是逐条命令审计日志。
 
 网络动态地址每轮从可信静态策略重新构建，IP 改变或断开时不会保留旧动态 origin。可信静态主机名可以通过构造参数配置，不会由收到的 Host 建立。设备实际 IP 仍由已核实的无线驱动提供。
 
