@@ -268,3 +268,61 @@ test('equal revision cannot change control fields but may refresh sample age', a
   assert.equal(h.client.connected, true);
   assert.equal(h.calls.filter((c) => c.init.method === 'PUT').length, 1);
 });
+
+test('a stalled response body times out and its late completion cannot replace recovered state', async () => {
+  const h = harness({ timeoutMs: 20 }); await connect(h);
+  const body = pending();
+  const read = h.client.refresh();
+  h.calls[1].resolve({ ok: true, status: 200, json: () => body.promise });
+  assert.equal(await read, false);
+  assert.equal(h.calls[1].init.signal.aborted, true);
+  assert.equal(h.client.connected, false);
+  assert.equal(h.client.reading, false);
+  assert.equal(await h.client.write('power', true), false);
+  const recovery = h.client.refresh();
+  h.calls[2].resolve(response(state({ revision: 2, fanOutputOn: true })));
+  assert.equal(await recovery, true);
+  body.resolve(state({ revision: 99, fanOutputOn: false }));
+  await settle();
+  assert.equal(h.client.state.revision, 2);
+  assert.equal(h.client.state.fanOutputOn, true);
+  assert.equal(h.client.connected, true);
+});
+
+test('a superseded poll failure cannot disconnect a successfully synchronized write', async () => {
+  const h = harness(); await connect(h);
+  const oldRead = h.client.refresh();
+  const write = h.client.write('power', true);
+  h.calls[2].resolve(response(state({ revision: 1, fanOutputOn: true })));
+  await settle();
+  h.calls[3].resolve(response(state({ revision: 1, fanOutputOn: true })));
+  assert.equal(await write, true);
+  const syncedAt = h.client.lastSync;
+  h.calls[1].resolve({ ok: true, status: 200, json: async () => { throw new Error('old connection closed'); } });
+  assert.equal(await oldRead, false);
+  assert.equal(h.client.connected, true);
+  assert.equal(h.client.state.fanOutputOn, true);
+  assert.equal(h.client.lastSync, syncedAt);
+  assert.equal(h.client.message, '状态已同步');
+});
+
+test('failed write and failed recovery release the lock without replaying the unknown command', async () => {
+  const h = harness(); await connect(h);
+  const broken = { ok: true, status: 200, json: async () => { throw new Error('truncated JSON'); } };
+  const write = h.client.write('power', true);
+  h.calls[1].resolve(broken);
+  await settle();
+  h.calls[2].resolve(broken);
+  assert.equal(await write, false);
+  assert.equal(h.client.busy, false);
+  assert.equal(h.client.reading, false);
+  assert.equal(h.client.connected, false);
+  assert.deepEqual(h.client.state, state());
+  assert.match(h.client.message, /操作结果未知/);
+  assert.equal(await h.client.write('power', false), false);
+  const recovery = h.client.refresh();
+  h.calls[3].resolve(response(state({ revision: 1, fanOutputOn: true })));
+  assert.equal(await recovery, true);
+  assert.equal(h.client.state.fanOutputOn, true);
+  assert.equal(h.calls.filter((c) => c.init.method === 'PUT').length, 1);
+});
