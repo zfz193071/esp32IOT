@@ -46,6 +46,17 @@ const edit = async (on, off) => evaluate(`(() => {
   ${field('threshold-off')}.value = ${JSON.stringify(off)};
   ${field('threshold-on')}.dispatchEvent(new Event('input', {bubbles:true}));
 })()`);
+async function injectTemperature(temperatureC) {
+  const response = await fetch(`${base}/__simulator/temperature`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ temperatureC }),
+  });
+  assert.equal(response.status, 200);
+}
+async function expectControl(mode, output) {
+  await until(`${field('mode')}.textContent === ${JSON.stringify(mode)} &&
+    ${field('output')}.textContent === ${JSON.stringify(output)} && !${field('power-off')}.disabled`);
+}
 try {
   await cdp('Network.enable');
   await cdp('Emulation.setDeviceMetricsOverride', {width:390, height:844, deviceScaleFactor:1, mobile:true});
@@ -79,6 +90,47 @@ try {
   await evaluate(`${field('reset-config')}.click()`);
   assert.equal(await evaluate(`${field('threshold-on')}.value`),'35.5');
   console.log('PASS disconnect, reconnect, draft preservation and reset without saving');
+  assert.equal(await evaluate(`${field('auto')}.disabled`), true);
+  await injectTemperature(40);
+  await until(`!${field('auto')}.disabled && ${field('temperature')}.textContent === '40.0 ℃'`);
+  await evaluate(`${field('auto')}.click()`);
+  await expectControl('自动', '开');
+  await injectTemperature(34);
+  await until(`${field('temperature')}.textContent === '34.0 ℃'`);
+  await expectControl('自动', '开');
+  await injectTemperature(32);
+  await expectControl('自动', '关');
+  await injectTemperature(40);
+  await expectControl('自动', '开');
+  console.log('PASS automatic thresholds and hysteresis on the real page');
+
+  await injectTemperature(null);
+  await until(`${field('sensor-health')}.textContent === '采集无效'`);
+  await expectControl('手动', '关');
+  assert.equal(await evaluate(`${field('fault')}.hidden`), false);
+  assert.equal(await evaluate(`${field('auto')}.disabled`), true);
+  assert.equal(await evaluate(`${field('temperature')}.textContent`), '不可用');
+  await injectTemperature(40);
+  await until(`${field('fault')}.hidden && !${field('auto')}.disabled`);
+  await expectControl('手动', '关');
+  console.log('PASS sensor failure closes output and recovery stays manual');
+
+  await evaluate(`${field('auto')}.click()`);
+  await expectControl('自动', '开');
+  // Let the sample expire naturally while the real page continues polling.
+  await until(`${field('sensor-health')}.textContent === '样本已过期'`);
+  await expectControl('手动', '关');
+  assert.equal(await evaluate(`${field('fault')}.hidden`), false);
+  assert.equal(await evaluate(`${field('auto')}.disabled`), true);
+  await evaluate(`${field('power-on')}.click()`);
+  await expectControl('手动', '开');
+  assert.equal(await evaluate(`${field('fault')}.hidden`), false);
+  await injectTemperature(31);
+  await until(`${field('fault')}.hidden && ${field('temperature')}.textContent === '31.0 ℃'`);
+  await expectControl('手动', '开');
+  await evaluate(`${field('power-off')}.click()`);
+  await expectControl('手动', '关');
+  console.log('PASS sample expiry, manual override during fault and recovery without takeover');
   if (process.env.ESP32_UI_SCREENSHOT) {
     const shot = await cdp('Page.captureScreenshot',{captureBeyondViewport:true});
     await writeFile(process.env.ESP32_UI_SCREENSHOT,Buffer.from(shot.data,'base64'));
