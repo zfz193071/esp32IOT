@@ -42,6 +42,7 @@ sh firmware/test/run-host-tests.sh --with-preview
 | 页面编入 C++ 后的字节一致性 | WebAssetsTest.mjs | 资源生成、编译和路由 |
 | 网页串行写、旧响应、重启与未知结果 | WebClientTest.mjs | 模拟 fetch，不测浏览器布局 |
 | 配置草稿、完整提交与保存确认 | ConfigDraftTest.mjs | 页面配置状态逻辑 |
+| 模拟命令扁平 JSON 与重复字段拒绝 | CommandJsonTest.mjs | 默认入口运行，不需要监听端口 |
 | 模拟 HTTP 配置原子性、同源限制、503、温度过期与慢正文准入 | PreviewApiTest.mjs | 可选；Node 模拟服务，不是 C++ HTTP 驱动 |
 | 首版工单归档门槛 | ReleaseReadinessTest.mjs | 测试 25 张必需工单的状态、勾选与完成记录检查；不能验证证据真实性 |
 
@@ -60,6 +61,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-10-29，ESP-020 模拟器重复字段校验：`node --test firmware/test/CommandJsonTest.mjs firmware/test/PreviewApiTest.mjs` 退出 0，1 项解析测试和 4 项 HTTP 测试全部通过，覆盖重复字段、转义后重复名称、嵌套值拒绝、字符串值边界与非法命令无状态副作用。新解析测试纳入默认回归入口；脚本语法、解析模块语法和差异空白检查通过。本轮未修改 C++ 或网页代码，未重跑相应套件，未执行实物验收。
 
 2026-10-29，ESP-020 模拟器慢正文修复：分段上传自动模式命令、延迟 5150 ms 完成正文，先复现样本过期仍返回 200；修复后返回 409。`node --test firmware/test/PreviewApiTest.mjs` 的 4 项 HTTP 测试全部通过，模拟器语法检查与 `git diff --check` 通过。本轮只改模拟器及测试，未重跑未改动的 C++／网页套件，未执行板端验证。
 

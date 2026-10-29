@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { validConfig } from '../web/config.mjs';
+import { parseCommand } from './parse-command.mjs';
 
 const port = Number(process.env.ESP32_PREVIEW_PORT || 8312);
 const web = new URL('../web/', import.meta.url);
@@ -79,7 +80,7 @@ createServer(async (req, res) => {
     // Reading the body yields to the event loop; the sample may have expired
     // since the headers arrived. Update health immediately before any command.
     refreshSampleAge();
-    const value = JSON.parse(body);
+    const value = parseCommand(body);
     if (temperatureInjection) {
       if (!value || Array.isArray(value) || Object.keys(value).length !== 1 ||
           !Object.hasOwn(value, 'temperatureC') ||

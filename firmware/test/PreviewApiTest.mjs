@@ -47,6 +47,19 @@ test('preview config API validates complete atomic payload and same-origin write
     }
     assert.equal((await put(next, { Origin: 'https://foreign.example' })).status, 403);
     assert.equal((await put(next, { 'Content-Type': 'text/plain' })).status, 400);
+    for (const [path, body] of [
+      ['/api/v1/power', '{"on":false,"on":true}'],
+      ['/api/v1/power', '{"on":false,"\\u006fn":true}'],
+      ['/api/v1/mode', '{"mode":"auto","mode":"manual"}'],
+      ['/api/v1/config', '{"onThresholdC":40,"offThresholdC":32,"onThresholdC":45}'],
+      ['/__simulator/temperature', '{"temperatureC":null,"temperatureC":40}'],
+    ]) {
+      const rejected = await fetch(`${base}${path}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body,
+      });
+      assert.equal(rejected.status, 400, body);
+      assert.equal((await rejected.json()).error.code, 'INVALID_REQUEST');
+    }
     assert.deepEqual(await (await fetch(`${base}/api/v1/state`)).json(), saved);
     const module = await fetch(`${base}/config.mjs`);
     assert.equal(module.status, 200);

@@ -118,7 +118,7 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
     -o "$build_dir/text-diagnostics-test"
 "$build_dir/text-diagnostics-test"
 
-node --test "$firmware_dir/test/WebClientTest.mjs" "$firmware_dir/test/ConfigDraftTest.mjs" "$firmware_dir/test/WebAssetsTest.mjs" "$firmware_dir/test/StateApiTest.mjs" "$firmware_dir/test/ReleaseReadinessTest.mjs"
+node --test "$firmware_dir/test/WebClientTest.mjs" "$firmware_dir/test/ConfigDraftTest.mjs" "$firmware_dir/test/WebAssetsTest.mjs" "$firmware_dir/test/StateApiTest.mjs" "$firmware_dir/test/ReleaseReadinessTest.mjs" "$firmware_dir/test/CommandJsonTest.mjs"
 
 if [ "$with_preview" = true ]; then
     node --test "$firmware_dir/test/PreviewApiTest.mjs"
