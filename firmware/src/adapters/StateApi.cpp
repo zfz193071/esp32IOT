@@ -82,6 +82,8 @@ StateResponse handleStateRequest(const std::string& method, const std::string& p
         state.revision > 9007199254740991ULL || !validConfig(config) ||
         !modeName(state.mode) || !sensorName(state.sensorStatus) ||
         !faultName(state.fault) || !sourceName(state.lastCommandSource) ||
+        (state.mode == Mode::Auto && (!healthy || state.fault != Fault::None)) ||
+        (healthy && state.fault != Fault::None) ||
         (healthy && (!state.hasSample || !state.hasTemperature || state.sampleAgeMs > 5000)) ||
         (state.hasTemperature && (!healthy || !std::isfinite(state.temperatureC)))) {
         return error(503, "STATE_UNAVAILABLE", "State cannot be serialized");

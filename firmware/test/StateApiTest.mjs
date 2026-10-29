@@ -44,10 +44,17 @@ test('C++ state endpoint produces JSON consumed by the real browser validator', 
       assert.equal(state.mode, 'manual');
       assert.equal(state.fanOutputOn, false);
     }
+    const manualFault = run('manual-fault-on');
+    assert.equal(manualFault.status, 200);
+    assert.equal(validState(manualFault.body), true);
+    assert.equal(manualFault.body.mode, 'manual');
+    assert.equal(manualFault.body.fanOutputOn, true);
+    assert.equal(manualFault.body.fault, 'temperature_unavailable');
     assert.equal(run('escape').body.bootId, 'quote"slash\\newline\n\0\x01');
     assert.equal(run('unavailable-placeholder').body.temperatureC, null);
     assert.equal(run('max-safe').body.revision, Number.MAX_SAFE_INTEGER);
-    for (const scenario of ['unsafe', 'nan', 'bad-enum', 'empty', 'long-id', 'bad-utf8', 'inconsistent', 'bad-config']) {
+    for (const scenario of ['unsafe', 'nan', 'bad-enum', 'empty', 'long-id', 'bad-utf8', 'inconsistent', 'bad-config',
+      'auto-initializing', 'auto-invalid', 'auto-stale', 'healthy-fault', 'auto-fault']) {
       const result = run(scenario);
       assert.equal(result.status, 503, scenario);
       assert.equal(result.body.error.code, 'STATE_UNAVAILABLE');

@@ -13,11 +13,12 @@ int main(int argc, char** argv) {
     if (argc != 2) return 1;
     const std::string scenario = argv[1];
     FanController fan("test-boot");
-    if (scenario == "healthy" || scenario == "invalid" || scenario == "stale") {
+    if (scenario == "healthy" || scenario == "invalid" || scenario == "stale" || scenario == "manual-fault-on") {
         fan.recordTemperature(31.125, 100);
         fan.setMode(Mode::Auto, CommandSource::Web);
-        if (scenario == "invalid") fan.invalidateTemperature(200);
+        if (scenario == "invalid" || scenario == "manual-fault-on") fan.invalidateTemperature(200);
         if (scenario == "stale") fan.tick(5101);
+        if (scenario == "manual-fault-on") fan.setPower(true, CommandSource::Web);
     }
     auto state = fan.snapshot();
     if (scenario == "escape") state.bootId = std::string("quote\"slash\\newline\n") + '\0' + '\x01';
@@ -31,6 +32,21 @@ int main(int argc, char** argv) {
     if (scenario == "unavailable-placeholder") state.temperatureC = std::numeric_limits<double>::quiet_NaN();
     if (scenario == "inconsistent") state.sensorStatus = SensorStatus::Ok;
     if (scenario == "bad-config") state.onThresholdC = 27;
+    if (scenario == "auto-initializing") state.mode = Mode::Auto;
+    if (scenario == "auto-invalid" || scenario == "auto-stale") {
+        state.mode = Mode::Auto;
+        state.sensorStatus = scenario == "auto-invalid" ? SensorStatus::Invalid : SensorStatus::Stale;
+        state.hasSample = true;
+        state.sampleAgeMs = 5001;
+    }
+    if (scenario == "healthy-fault" || scenario == "auto-fault") {
+        state.sensorStatus = SensorStatus::Ok;
+        state.hasSample = true;
+        state.hasTemperature = true;
+        state.temperatureC = 31;
+        state.fault = Fault::TemperatureUnavailable;
+        if (scenario == "auto-fault") state.mode = Mode::Auto;
+    }
     if (scenario == "healthy") std::locale::global(std::locale(std::locale::classic(), new CommaDecimal));
     const std::string method = scenario == "write" ? "PUT" : scenario == "long-method" ? std::string(17, 'A') : "GET";
     const std::string path = scenario == "missing" ? "/private-password-must-not-echo" :
