@@ -239,3 +239,32 @@ test('a retired boot in a write response does not retire the current boot', asyn
   assert.equal(h.client.state.fanOutputOn, false);
   assert.match(h.client.message, /旧响应/);
 });
+
+test('equal revision cannot change control fields but may refresh sample age', async () => {
+  const h = harness(); await connect(h);
+  for (const change of [{ fanOutputOn: true }, { onThresholdC: 35 },
+    { lastCommandSource: 'web' }, { wifiConnected: false },
+    { sensorStatus: 'invalid' }]) {
+    const read = h.client.refresh();
+    h.calls.at(-1).resolve(response(state(change)));
+    assert.equal(await read, false, JSON.stringify(change));
+    assert.equal(h.client.connected, false);
+    assert.deepEqual(h.client.state, state());
+    assert.equal(await h.client.write('power', true), false);
+  }
+  const recovery = h.client.refresh();
+  const fresh = state({ revision: 1, sensorStatus: 'ok', temperatureC: 31, sampleAgeMs: 100 });
+  h.calls.at(-1).resolve(response(fresh));
+  assert.equal(await recovery, true);
+  const ageOnly = h.client.refresh();
+  h.calls.at(-1).resolve(response({ ...fresh, sampleAgeMs: 0 }));
+  assert.equal(await ageOnly, true, 'a new identical temperature sample can reset age without changing revision');
+  const conflictingWrite = h.client.write('power', true);
+  h.calls.at(-1).resolve(response({ ...fresh, fanOutputOn: true }));
+  await settle();
+  h.calls.at(-1).resolve(response({ ...fresh, sampleAgeMs: 200 }));
+  assert.equal(await conflictingWrite, false);
+  assert.equal(h.client.state.fanOutputOn, false);
+  assert.equal(h.client.connected, true);
+  assert.equal(h.calls.filter((c) => c.init.method === 'PUT').length, 1);
+});

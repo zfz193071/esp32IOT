@@ -1,5 +1,9 @@
 import { validConfig } from './config.mjs';
 
+// These fields advance the device revision; sampleAgeMs alone does not.
+const revisionFields = ['mode', 'fanOutputOn', 'temperatureC', 'sensorStatus',
+  'onThresholdC', 'offThresholdC', 'fault', 'lastCommandSource', 'wifiConnected'];
+
 export function validState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
   const healthy = s.sensorStatus === 'ok';
@@ -80,6 +84,9 @@ export class DeviceClient {
     if (this.retiredBoots.has(next.bootId)) return false;
     if (this.state && next.bootId === this.state.bootId &&
         next.revision < this.state.revision) return false;
+    if (this.state && next.bootId === this.state.bootId &&
+        next.revision === this.state.revision &&
+        revisionFields.some((field) => next[field] !== this.state[field])) return false;
     if (this.state && next.bootId !== this.state.bootId) {
       this.retiredBoots.add(this.state.bootId);
     }
@@ -98,7 +105,7 @@ export class DeviceClient {
       const next = await this.request('/api/v1/state');
       if (epoch !== this.epoch || id !== this.readId) return false;
       const rebooted = this.state && this.state.bootId !== next.bootId;
-      if (!this.apply(next)) throw new Error('收到旧状态，等待重新同步');
+      if (!this.apply(next)) throw new Error('收到旧状态或版本冲突，等待重新同步');
       this.message = rebooted ? '设备已重启，已同步新状态' : '状态已同步';
       return true;
     } catch (error) {
@@ -141,7 +148,7 @@ export class DeviceClient {
       } else if (this.apply(next)) {
         accepted = true;
       } else {
-        notice = '收到旧响应，结果待同步';
+        notice = '收到旧响应或版本冲突，结果待同步';
       }
     } catch (error) {
       this.connected = false;
