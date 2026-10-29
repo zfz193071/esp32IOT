@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { request } from 'node:http';
 import { validState } from '../web/client.mjs';
 
 async function withServer(port, fail, check) {
@@ -50,6 +51,40 @@ test('preview config API validates complete atomic payload and same-origin write
     const module = await fetch(`${base}/config.mjs`);
     assert.equal(module.status, 200);
     assert.match(module.headers.get('content-type'), /javascript/);
+  });
+});
+
+test('preview rechecks sample freshness after a slow command body arrives', async () => {
+  await withServer(18315, false, async (base) => {
+    const injected = await fetch(`${base}/__simulator/temperature`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ temperatureC: 40 }),
+    });
+    assert.equal(injected.status, 200);
+    const result = await new Promise((resolve, reject) => {
+      let timer;
+      const req = request(`${base}/api/v1/mode`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      }, (res) => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('error', reject);
+        res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(body) }));
+      });
+      req.on('error', (error) => { clearTimeout(timer); reject(error); });
+      req.setTimeout(10000, () => req.destroy(new Error('slow body test timed out')));
+      req.write('{"mode":');
+      timer = setTimeout(() => req.end('"auto"}'), 5150);
+    });
+    assert.equal(result.status, 409);
+    assert.equal(result.body.error.code, 'TEMPERATURE_UNAVAILABLE');
+    const state = await (await fetch(`${base}/api/v1/state`)).json();
+    assert.equal(state.sensorStatus, 'stale');
+    assert.equal(state.mode, 'manual');
+    assert.equal(state.fanOutputOn, false);
+    assert.equal(state.fault, 'none', 'rejecting auto admission must not create an automatic-run fault');
+    assert.equal(validState(state), true);
   });
 });
 

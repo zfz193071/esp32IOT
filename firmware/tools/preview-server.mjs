@@ -76,6 +76,9 @@ createServer(async (req, res) => {
       body += chunk;
       if (Buffer.byteLength(body) > 1024) { send(413, { error: { code: 'TOO_LARGE' } }); return; }
     }
+    // Reading the body yields to the event loop; the sample may have expired
+    // since the headers arrived. Update health immediately before any command.
+    refreshSampleAge();
     const value = JSON.parse(body);
     if (temperatureInjection) {
       if (!value || Array.isArray(value) || Object.keys(value).length !== 1 ||
