@@ -69,6 +69,15 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
 
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/src" \
+    "$firmware_dir/src/config/ConfigRecordCodec.cpp" \
+    "$firmware_dir/src/config/ConfigStore.cpp" \
+    "$firmware_dir/src/domain/FanController.cpp" \
+    "$firmware_dir/test/ConfigRecordCodecTest.cpp" \
+    -o "$build_dir/config-record-codec-test"
+"$build_dir/config-record-codec-test"
+
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" \
     "$firmware_dir/src/config/ConfigStore.cpp" \
     "$firmware_dir/src/domain/FanController.cpp" \
     "$firmware_dir/test/AutomaticControlTest.cpp" \
