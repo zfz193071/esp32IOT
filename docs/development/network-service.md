@@ -1,6 +1,6 @@
 # Wi-Fi 连接与限频重试
 
-ESP-011 的 NetworkService 已实现硬件无关的非阻塞连接调度、超时、重连间隔及连接／IP 变化事件。当前使用模拟 NetworkPort 验证，尚未调用实际 Wi-Fi 库或连接真实路由器。
+ESP-011 的 NetworkService 已实现硬件无关的非阻塞连接调度、超时、重连间隔及连接／IP 变化事件。ArduinoNetworkPort 已调用 Arduino-ESP32 Wi-Fi 接口，并通过主机桩验证状态映射；尚未在目标板上编译、连接真实路由器或测量响应时间。
 
 ## 接口契约
 
@@ -28,12 +28,14 @@ App 每轮调用 networkService.update(nowMs)，将 connected 传给 FanControll
 
 ## 私有配置
 
-`firmware/config/wifi.example.h` 提供 SSID／密码占位符。实际板端适配器建立后，将它复制为同目录 wifi.local.h，填写本地值；该文件已加入 Git 忽略。当前测试和模拟器不会加载该配置，仓库中没有真实凭据。
+`firmware/config/wifi.example.h` 提供 SSID／密码占位符。将它复制为同目录 `wifi.local.h` 并填写本地值；该文件已加入 Git 忽略。`firmware/arduino/WiFiBringup/WiFiBringup.ino` 在板端编译时读取该私有头文件。主机测试和模拟器不会加载该配置，仓库中没有真实凭据。未填写的 SSID 占位值会在调用 Wi-Fi 库前被拒绝。
 
 Wi-Fi 参数由板端适配器读取并交给无线库，不进入 NetworkService、公开状态 JSON 或网络事件。不要把本地配置头包含到网页资源或响应模块中。
 
 ## 验证与剩余工作
 
-运行 `sh firmware/test/run-host-tests.sh`。NetworkServiceTest.cpp 使用模拟驱动和真实控制器，验证等待期间本地按键、连接状态推进、稳定状态不刷版本、IP 变化、断网保持模式／输出、错误凭据式失败的限频重试、精确超时和重试边界、计时回绕、缺失 IP、非法配置及无补发风暴。
+运行 `sh firmware/test/run-host-tests.sh`。NetworkServiceTest.cpp 使用模拟驱动和真实控制器，验证等待期间本地按键、连接状态推进、稳定状态不刷版本、IP 变化、断网保持模式／输出、错误凭据式失败的限频重试、精确超时和重试边界、计时回绕、缺失 IP、非法配置及无补发风暴。ArduinoNetworkPortTest.cpp 用 Wi-Fi API 主机桩验证初次连接时的暂时断线状态、取得 IP 后连接、已连接后掉线、驱动失败以及禁用自动重连。
+
+实物准备好后，用 Arduino-ESP32 编译并烧录 `WiFiBringup.ino`，在 115200 波特率串口查看连接、超时、重试及设备 IP。该独立程序不配置任何电机 GPIO，也不会打印 SSID 或密码；请分别用正确／错误凭据与路由器断电恢复验证。板端 Wi-Fi 状态适配后续仍需装入完整控制固件。
 
 正确／错误真实凭据、路由器断电与恢复、Wi-Fi 库非阻塞行为、实际 IP 输出、密码不进入驱动日志以及无线洪泛下的按键响应，均待工具链和硬件联调。ESP-011 保持进行中，ESP-008 主循环依赖不解除。

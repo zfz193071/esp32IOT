@@ -10,7 +10,7 @@
 | 网页及固件资源生成 | `firmware/web/`、`firmware/tools/embed-web.mjs` | 5 条路由的逐字节和可重复生成测试；[资源说明](../development/web-assets.md) |
 | 本机模拟预览 | `firmware/tools/preview-server.mjs` | 页面与接口模拟测试；[运行指南](../development/from-zero.md) |
 | 模拟输入压力 | `firmware/test/AppLoopPressureTest.cpp` | 20,000 轮模拟调度；[边界与实物记录](../development/pressure-validation.md) |
-| Wi-Fi 配置样例 | `firmware/config/wifi.example.h` | 仅占位值；私有 `wifi.local.h` 被 Git 忽略，当前代码尚未读取 |
+| Wi-Fi 配置样例 | `firmware/config/wifi.example.h` | 仅占位值；私有 `wifi.local.h` 被 Git 忽略，独立 Wi-Fi 串口程序在板端编译时读取 |
 
 主机回归入口为 `sh firmware/test/run-host-tests.sh`；要加入本地模拟 HTTP 测试，使用 `--with-preview`。网页资源使用 `node firmware/tools/embed-web.mjs` 生成到被忽略的 `firmware/build/generated/`。构建产物来源、版本和校验方式见 [网页资源说明](../development/web-assets.md)。这些命令与板端编译、烧录是不同步骤。
 

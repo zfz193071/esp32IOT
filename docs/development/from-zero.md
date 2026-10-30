@@ -50,7 +50,7 @@ node firmware/tools/preview-server.mjs
 4. ESP-011～016 接入真实 Wi-Fi 与 HTTP 服务，将生成的网页资源编译进固件；串口记录设备实际 IP，用处于同一 Wi-Fi 的手机访问该 IP。
 5. ESP-017～021 接入真实温度器件和持久化；验证回差、失效关闭、手动接管、保存与重启恢复。最后按 [压力与连续运行验收](pressure-validation.md) 执行 ESP-023。
 
-板端 Wi-Fi 适配器实现后，把 `firmware/config/wifi.example.h` 复制为同目录 `wifi.local.h` 并填写本地凭据；该文件已被 Git 忽略。当前主机测试与模拟预览不会读取它。串口和报告不要打印密码。网页显示的开关状态是控制信号状态，不代表检测到电机实际转速。
+把 `firmware/config/wifi.example.h` 复制为同目录 `wifi.local.h` 并填写本地凭据；该文件已被 Git 忽略。独立的 `firmware/arduino/WiFiBringup/WiFiBringup.ino` 会在板端编译时读取它；主机测试与模拟预览不会读取它。串口和报告不要打印密码。网页显示的开关状态是控制信号状态，不代表检测到电机实际转速。
 
 ## 5. 按现象排查
 
