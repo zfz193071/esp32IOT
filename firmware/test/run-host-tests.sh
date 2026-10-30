@@ -106,6 +106,17 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
 
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/src" \
+    "$firmware_dir/src/adapters/HttpRequestParser.cpp" \
+    "$firmware_dir/src/adapters/WriteApi.cpp" \
+    "$firmware_dir/src/adapters/StateApi.cpp" \
+    "$firmware_dir/src/config/ConfigStore.cpp" \
+    "$firmware_dir/src/domain/FanController.cpp" \
+    "$firmware_dir/test/HttpRequestParserTest.cpp" \
+    -o "$build_dir/http-request-parser-test"
+"$build_dir/http-request-parser-test"
+
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" \
     "$firmware_dir/src/services/TemperatureService.cpp" \
     "$firmware_dir/src/config/ConfigStore.cpp" \
     "$firmware_dir/src/domain/FanController.cpp" \

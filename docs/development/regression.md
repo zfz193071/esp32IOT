@@ -33,6 +33,7 @@ sh firmware/test/run-host-tests.sh --with-preview
 | 配置字节格式、CRC、截断／位损坏与恢复 | ConfigRecordCodecTest.cpp | 独立字节样本与模拟字节后端，不测真实 Flash |
 | 回差等号、5000 ms 新鲜度、故障恢复和手动接管 | AutomaticControlTest.cpp | 包括边界两侧与计时回绕 |
 | 严格参数、来源拒绝、保存失败 | WriteApiTest.cpp | 已解析请求，不测 TCP/HTTP 字节解析 |
+| HTTP 分段／分帧、大小预算、超时和写接口串接 | HttpRequestParserTest.cpp | 原始内存字节，不测实际 TCP 和发送耗时 |
 | 非阻塞采集调度、超时与恢复 | TemperatureServiceTest.cpp | 模拟采集，不测真实驱动耗时 |
 | 连接超时、重试节奏、断网继续控制 | NetworkServiceTest.cpp | 模拟无线端口 |
 | 红外精确映射、重复帧、过期及乱序 | InfraredInputTest.cpp | 合成编码，不测真实遥控协议 |
@@ -63,6 +64,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-10-30，新增 HttpRequestParser 后执行 `sh firmware/test/run-host-tests.sh`，退出 0：18 个 C++ 测试程序、26 项 Node 测试全部通过。新增验证全部双片切分位置、逐字节输入、逐位置截断、重复／歧义头、长度溢出、精确容量边界、固定接收预算、总期限与时钟回绕、流水线尾部不交付，以及原始开关／配置请求经真实 WriteApi 的处理。默认入口跳过模拟 HTTP 测试；本轮未改 Node 模拟器或网页，未进行实际 TCP 或设备验证。
 
 2026-10-30，完成 NVS 适配和保存结果未知处理后，`sh firmware/test/run-host-tests.sh` 退出 0：17 个 C++ 测试程序、26 项 Node 测试全部通过。`node --test firmware/test/PreviewApiTest.mjs` 在允许本地监听的环境退出 0，5 项 HTTP 测试通过。独立后台 Chrome 通过未知结果提示、保存禁用、草稿保留、手动控制及刷新后保持暂停检查，并目视核对手机宽度截图。最终补齐主循环保存暂停日志后，单独重新编译运行 AppLoopTest 与 TextDiagnosticsTest，均通过，验证首次记录及重复提交不刷屏。仍未执行目标工具链编译、烧录或真实 Flash 恢复。
 

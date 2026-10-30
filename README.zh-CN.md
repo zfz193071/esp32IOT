@@ -26,7 +26,7 @@
 - [真实 ESP32 联调流程](docs/development/esp32-bringup.md)：从 USB 烧录、串口日志到实物风扇联调。
 - [串口最小程序与 Arduino GPIO 端口](docs/development/serial-bringup.md)：不驱动电机的最小程序及板端 GPIO 接入边界。
 - [从零运行与排障指南](docs/development/from-zero.md)：当前可执行命令、实物接入顺序与故障定位。
-- [C++ 状态响应与网页契约](docs/development/state-api.md)：状态 JSON、空值、安全整数与响应头要求。
+- [C++ 状态响应与 HTTP 增量解析](docs/development/state-api.md)：状态 JSON、分段接收、请求大小预算、超时及响应头要求。
 - [C++ 写请求与控制器接入](docs/development/write-api.md)：严格 JSON、同源校验与配置保存。
 - [非阻塞温度采集调度](docs/development/temperature-service.md)：驱动契约、转换超时、采样健康与主循环顺序。
 - [Wi-Fi 连接与限频重试](docs/development/network-service.md)：连接超时、IP 事件、私有配置与断网行为。

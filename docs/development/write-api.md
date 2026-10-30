@@ -1,6 +1,6 @@
 # C++ 写请求与控制器接入
 
-ESP-013 的开关／模式处理，以及 ESP-020 的配置写入处理，已在 `firmware/src/adapters/WriteApi.h/.cpp` 实现。它们接收 HTTP 适配器解析后的请求，实际调用 FanController 和 ConfigStore，不再仅是 Node 模拟行为。当前模块没有网络监听，板端 HTTP 库、真实存储和主循环装配仍待完成。
+ESP-013 的开关／模式处理，以及 ESP-020 的配置写入处理，已在 `firmware/src/adapters/WriteApi.h/.cpp` 实现。它们接收 HTTP 适配器解析后的请求，实际调用 FanController 和 ConfigStore，不再仅是 Node 模拟行为。现已补齐 HttpRequestParser 原始字节解析和 NVS 适配主机测试；板端网络监听、完整装配和实物存储验证仍待完成。
 
 ## 三个入口
 
@@ -35,6 +35,8 @@ ESP-013 的开关／模式处理，以及 ESP-020 的配置写入处理，已在
 没有 Origin 的诊断请求默认拒绝。仅在明确配置 `allowOriginlessDiagnostics=true` 时允许，且仍须匹配可信 Host。这一例外针对 CLI 调试，不是身份认证；可信局域网之外不应使用此接口策略。
 
 HTTP 适配器必须拒绝重复的 Host、Origin、Content-Type 以及冲突的 Content-Length／Transfer-Encoding，或将 `ambiguousHeaders` 标为 true；不能随意挑一个重复头值传入。Header 大小写、URL path/query 分离和消息分帧都属于传输层职责，本模块不解析原始 TCP 字节。
+
+现有 `HttpRequestParser` 会直接拒绝上述重复／歧义头，仅在全部头与声明正文收齐后交付一次 WriteRequest，再由本模块检查同源和命令。该解析器的接收预算、协议子集及错误码见 [HTTP 请求增量解析](state-api.md#http-请求增量解析)。它尚未接入实际 socket。
 
 ## 装配顺序与验证
 
