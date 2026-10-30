@@ -1,6 +1,6 @@
 # 网页温控配置与模拟接口
 
-ESP-020 的网页表单、请求协调和本机模拟配置 API 已实现。C++ PUT 命令处理已接入真实控制器和配置流程，见 [写处理说明](write-api.md)；实际 ESP32 HTTP 路由装配、ConfigStore 持久化适配、温度采集与断电恢复仍未实现；模拟器把配置保存在进程内存，重启预览进程会恢复默认阈值。
+ESP-020 的网页表单、请求协调和本机模拟配置 API 已实现。C++ PUT 命令处理已接入真实控制器和配置流程，见 [写处理说明](write-api.md)；NVS 适配已通过主机桩测试，实际 ESP32 HTTP 路由装配、温度驱动与实物存储恢复仍待完成；模拟器把配置保存在进程内存，重启预览进程会恢复默认阈值。
 
 ## 使用流程
 
@@ -20,6 +20,8 @@ ESP-020 的网页表单、请求协调和本机模拟配置 API 已实现。C++ 
 
 `400` 表示参数错误，`503` 配合 `STORAGE_FAILURE` 表示保存失败并保留旧配置。客户端显示失败后重新查询，不显示成功。只有约定的存储失败响应才有“保留原配置”语义；一般网络或服务错误视为结果未知。
 
+`503`／`STORAGE_UNKNOWN` 表示保存结果未知，当前继续使用旧阈值，重启后可能读取到旧值或新值。设备公开 `configSaveBlocked: true` 后，网页持续提示重启核实，并禁止保存配置；手动开关和模式控制仍可用。草稿不丢弃，不自动重发；刷新网页也能读到暂停状态。同次启动的响应不能解除暂停，观察到新 bootId 并成功同步后恢复保存。普通网络超时仍按原有查询恢复规则处理，不能据此断言存储内部状态。
+
 同源规则沿用模拟服务器的 Host／Origin 校验，非 JSON 写入被拒绝。模拟器不替代 ESP-013 的 C++ 写处理测试或板端 HTTP 验收。
 
 本机开发模拟器额外提供 `PUT /__simulator/temperature`，只接受 `{"temperatureC":数字}` 或 `{"temperatureC":null}`，且仅监听 `127.0.0.1`。它不是设备 API，也不会打包进固件资源。注入有效温度后，页面可以切换自动模式并观察 30℃ 开启、28℃ 关闭的默认回差；修改阈值会立即按新值计算。注入 `null` 模拟传感器失效；有效样本超过 5 秒未更新则在下一次本机请求时变为过期。两种情况都会使自动模式退出并关机，故障显示为温度不可用；手动开关仍可用。恢复有效温度会清除故障，但不会自行重进自动模式。样本年龄随本机单调时钟增长，不因读取状态而推进业务版本；模拟器仍不模拟真实传感器驱动或电机动作。
@@ -35,6 +37,9 @@ node firmware/tools/preview-server.mjs
 # 独立故障模拟：合法且有变化的配置保存返回 503
 ESP32_PREVIEW_PORT=8314 ESP32_SIMULATE_STORAGE_FAILURE=1 node firmware/tools/preview-server.mjs
 
+# 结果未知模拟：首次有变化的保存后，本进程持续暂停配置保存
+ESP32_PREVIEW_PORT=8315 ESP32_SIMULATE_STORAGE_UNKNOWN=1 node firmware/tools/preview-server.mjs
+
 # 在默认 8312 端口的另一终端注入样本；null 可模拟传感器失效
 curl -X PUT http://127.0.0.1:8312/__simulator/temperature -H 'Content-Type: application/json' -d '{"temperatureC":30}'
 curl -X PUT http://127.0.0.1:8312/__simulator/temperature -H 'Content-Type: application/json' -d '{"temperatureC":null}'
@@ -42,7 +47,7 @@ curl -X PUT http://127.0.0.1:8312/__simulator/temperature -H 'Content-Type: appl
 # 全部主机测试，无需开放本地端口
 sh firmware/test/run-host-tests.sh
 
-# HTTP 集成测试，临时使用 18313～18315 端口并自动停止测试进程
+# HTTP 集成测试，临时使用 18313～18316 端口并自动停止测试进程
 node --test firmware/test/PreviewApiTest.mjs
 ```
 

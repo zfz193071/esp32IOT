@@ -30,7 +30,7 @@ int main() {
     for (unsigned i = 0; i < 5; ++i) {
         diagnostics.startup(results[i], state);
         check(sink.lines.back() == std::string("startup config=") + names[i] +
-            " boot=boot-1 revision=0 mode=manual output=off source=system fault=none on_c=30 off_c=28",
+            " boot=boot-1 revision=0 mode=manual output=off source=system fault=none on_c=30 off_c=28 config_save_blocked=false",
             "startup identifies configuration fallback and safe initial state");
     }
     state.mode = Mode::Auto;
@@ -45,6 +45,10 @@ int main() {
     state.fault = Fault::TemperatureUnavailable;
     diagnostics.stateChanged(state);
     check(sink.lines.back().find("fault=temperature_unavailable") != std::string::npos, "fault is visible");
+    state.configSaveBlocked = true;
+    diagnostics.stateChanged(state);
+    check(sink.lines.back().find("config_save_blocked=true") != std::string::npos,
+          "uncertain save status is visible in diagnostics");
     const auto count = sink.calls;
     diagnostics.temperature(TemperatureDiagnostic::None);
     diagnostics.network(NetworkUpdate{});

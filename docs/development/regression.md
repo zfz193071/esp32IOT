@@ -18,7 +18,7 @@ sh firmware/test/run-host-tests.sh
 sh firmware/test/run-host-tests.sh --with-preview
 ```
 
-该选项额外运行 PreviewApiTest，启动并清理自己的模拟进程，使用本地端口 18313～18315；端口需空闲，运行环境需允许监听本地网络。不要为测试终止其他进程。默认执行会明确打印该项 SKIP，不能把默认成功记录为模拟 HTTP 已通过。
+该选项额外运行 PreviewApiTest，启动并清理自己的模拟进程，使用本地端口 18313～18316；端口需空闲，运行环境需允许监听本地网络。不要为测试终止其他进程。默认执行会明确打印该项 SKIP，不能把默认成功记录为模拟 HTTP 已通过。
 
 任一断言或编译失败会使脚本非零退出；C++ 输出 `FAIL: 规则说明`，Node 输出失败用例和断言位置。只有所有请求的套件通过才打印最后的 PASS。退出码 2 表示不支持的脚本参数。
 
@@ -29,6 +29,7 @@ sh firmware/test/run-host-tests.sh --with-preview
 | 默认关闭、命令来源、显式开关和幂等 | FanControllerTest.cpp | 控制状态，不测 GPIO 电平 |
 | 按下消抖、启动按住、长按与计时回绕 | ButtonDebouncerTest.cpp | 归一化按键输入 |
 | 阈值范围、间隔、损坏回退和保存失败 | ConfigStoreTest.cpp | 模拟原子存储，不测断电 Flash |
+| NVS 句柄、固定长度读取及写入／提交未知结果 | NvsConfigPersistenceTest.cpp | 主机桩模拟旧／新值两种恢复，不测真实 Flash |
 | 配置字节格式、CRC、截断／位损坏与恢复 | ConfigRecordCodecTest.cpp | 独立字节样本与模拟字节后端，不测真实 Flash |
 | 回差等号、5000 ms 新鲜度、故障恢复和手动接管 | AutomaticControlTest.cpp | 包括边界两侧与计时回绕 |
 | 严格参数、来源拒绝、保存失败 | WriteApiTest.cpp | 已解析请求，不测 TCP/HTTP 字节解析 |
@@ -62,6 +63,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-10-30，完成 NVS 适配和保存结果未知处理后，`sh firmware/test/run-host-tests.sh` 退出 0：17 个 C++ 测试程序、26 项 Node 测试全部通过。`node --test firmware/test/PreviewApiTest.mjs` 在允许本地监听的环境退出 0，5 项 HTTP 测试通过。独立后台 Chrome 通过未知结果提示、保存禁用、草稿保留、手动控制及刷新后保持暂停检查，并目视核对手机宽度截图。最终补齐主循环保存暂停日志后，单独重新编译运行 AppLoopTest 与 TextDiagnosticsTest，均通过，验证首次记录及重复提交不刷屏。仍未执行目标工具链编译、烧录或真实 Flash 恢复。
 
 2026-10-30，ESP-018 补齐配置记录编解码，运行 `sh firmware/test/run-host-tests.sh` 退出 0：16 个 C++ 测试程序和 23 项 Node 测试通过。新增覆盖独立字节样本、精度保留、非法写入、截断／尾随字节、224 个单比特翻转，以及字节后端的版本／阈值校验、保存失败与新实例恢复。可选模拟 HTTP 测试按默认入口跳过；未执行板端编译、Flash 写入或真实断电恢复。
 

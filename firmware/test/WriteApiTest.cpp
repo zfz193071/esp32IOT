@@ -9,9 +9,14 @@ void check(bool ok, const char* rule) {
 class MemoryPersistence : public ConfigPersistence {
 public:
     bool fail = false;
+    bool unknown = false;
     unsigned writes = 0;
     ReadResult read(ConfigRecord&) override { return ReadResult::Missing; }
-    bool replaceAtomically(const ConfigRecord&) override { ++writes; return !fail; }
+    PersistenceResult replace(const ConfigRecord&) override {
+        ++writes;
+        if (unknown) return PersistenceResult::Unknown;
+        return fail ? PersistenceResult::Failed : PersistenceResult::Saved;
+    }
 };
 int main() {
     MemoryPersistence disk;
@@ -107,6 +112,19 @@ int main() {
     const auto failure = send();
     check(failure.status == 503 && failure.body.find("STORAGE_FAILURE") != std::string::npos &&
               snapshot() == beforeFailure, "storage failure preserves full controller snapshot");
+    disk.unknown = true;
+    const auto oldRevision = fan.snapshot().revision;
+    const auto uncertain = send();
+    check(uncertain.status == 503 && uncertain.body.find("STORAGE_UNKNOWN") != std::string::npos &&
+              fan.snapshot().configSaveBlocked && fan.snapshot().onThresholdC == 29 &&
+              fan.snapshot().offThresholdC == 27 && fan.snapshot().fanOutputOn &&
+              fan.snapshot().mode == Mode::Auto && fan.snapshot().revision == oldRevision + 1 &&
+              snapshot().find("\"configSaveBlocked\":true") != std::string::npos,
+          "unknown save has a distinct error and publishes blocked status with old thresholds");
+    const auto writesAfterUnknown = disk.writes;
+    request.body = "{\"onThresholdC\":29,\"offThresholdC\":27}";
+    check(send().status == 503 && disk.writes == writesAfterUnknown &&
+              fan.snapshot().revision == oldRevision + 1, "even identical config is blocked without rewriting");
     request.path = "/api/v1/power"; request.body = "{\"on\":false}";
     check(send().status == 200 && fan.snapshot().mode == Mode::Manual && !fan.snapshot().fanOutputOn,
           "web manual off takes over automatic control");

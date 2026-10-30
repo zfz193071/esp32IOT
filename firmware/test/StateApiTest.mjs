@@ -27,7 +27,8 @@ test('C++ state endpoint produces JSON consumed by the real browser validator', 
     assert.equal(validState(initial.body), true);
     assert.deepEqual(initial.body, { bootId: 'test-boot', revision: 0, mode: 'manual',
       fanOutputOn: false, temperatureC: null, sensorStatus: 'initializing', sampleAgeMs: null,
-      onThresholdC: 30, offThresholdC: 28, fault: 'none', lastCommandSource: 'system', wifiConnected: false });
+      onThresholdC: 30, offThresholdC: 28, configSaveBlocked: false,
+      fault: 'none', lastCommandSource: 'system', wifiConnected: false });
     const healthy = run('healthy').body;
     assert.equal(validState(healthy), true);
     assert.equal(healthy.temperatureC, 31.125);

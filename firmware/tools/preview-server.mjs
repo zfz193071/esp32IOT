@@ -17,7 +17,8 @@ const routes = new Map([
 ]);
 const initial = () => ({ bootId: randomUUID(), revision: 0, mode: 'manual', fanOutputOn: false,
   temperatureC: null, sensorStatus: 'initializing', sampleAgeMs: null,
-  onThresholdC: 30, offThresholdC: 28, fault: 'none', lastCommandSource: 'system', wifiConnected: true });
+  onThresholdC: 30, offThresholdC: 28, configSaveBlocked: false,
+  fault: 'none', lastCommandSource: 'system', wifiConnected: true });
 let state = initial();
 let sampleTimeMs = null;
 function publish(next) {
@@ -107,11 +108,18 @@ createServer(async (req, res) => {
     }
     if (req.url === '/api/v1/config') {
       if (!validConfig(value)) { send(400, { error: { code: 'INVALID_CONFIG' } }); return; }
+      if (state.configSaveBlocked) {
+        send(503, { error: { code: 'STORAGE_UNKNOWN' } }); return;
+      }
       if (state.onThresholdC === value.onThresholdC && state.offThresholdC === value.offThresholdC) {
         send(200, state); return;
       }
       if (process.env.ESP32_SIMULATE_STORAGE_FAILURE === '1') {
         send(503, { error: { code: 'STORAGE_FAILURE' } }); return;
+      }
+      if (process.env.ESP32_SIMULATE_STORAGE_UNKNOWN === '1') {
+        publish({ ...state, configSaveBlocked: true });
+        send(503, { error: { code: 'STORAGE_UNKNOWN' } }); return;
       }
       const next = { ...state, ...value };
       if (state.mode === 'auto') {

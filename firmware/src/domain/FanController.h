@@ -26,6 +26,7 @@ struct DeviceState {
     std::uint32_t sampleAgeMs = 0;
     double onThresholdC = 30;
     double offThresholdC = 28;
+    bool configSaveBlocked = false;
     Fault fault = Fault::None;
     CommandSource lastCommandSource = CommandSource::System;
     bool wifiConnected = false;

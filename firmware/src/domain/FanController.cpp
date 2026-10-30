@@ -93,6 +93,10 @@ void FanController::setWifiConnected(bool connected) {
 
 SaveResult FanController::setConfig(ConfigStore& store, const TemperatureConfig& config) {
     const auto result = store.save(config);
+    if (result == SaveResult::StorageUnknown && !state_.configSaveBlocked) {
+        state_.configSaveBlocked = true;
+        ++state_.revision;
+    }
     if (result == SaveResult::Saved || result == SaveResult::Unchanged) {
         if (state_.onThresholdC != config.onThresholdC || state_.offThresholdC != config.offThresholdC) {
             state_.onThresholdC = config.onThresholdC;

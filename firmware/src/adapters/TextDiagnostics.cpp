@@ -44,7 +44,8 @@ std::string stateFields(const DeviceState& state) {
         << " output=" << (state.fanOutputOn ? "on" : "off")
         << " source=" << source(state.lastCommandSource)
         << " fault=" << (state.fault == Fault::None ? "none" : "temperature_unavailable")
-        << " on_c=" << state.onThresholdC << " off_c=" << state.offThresholdC;
+        << " on_c=" << state.onThresholdC << " off_c=" << state.offThresholdC
+        << " config_save_blocked=" << (state.configSaveBlocked ? "true" : "false");
     return out.str();
 }
 } // namespace

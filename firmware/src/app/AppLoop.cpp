@@ -64,6 +64,7 @@ bool AppLoop::step(std::uint32_t nowMs, bool buttonPressed) {
     }
     if (state.mode != lastLogged_.mode || state.fanOutputOn != lastLogged_.fanOutputOn ||
         state.fault != lastLogged_.fault || state.lastCommandSource != lastLogged_.lastCommandSource ||
+        state.configSaveBlocked != lastLogged_.configSaveBlocked ||
         state.onThresholdC != lastLogged_.onThresholdC || state.offThresholdC != lastLogged_.offThresholdC) {
         diagnostics_.stateChanged(state);
         lastLogged_ = state;

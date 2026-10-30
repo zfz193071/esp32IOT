@@ -7,7 +7,9 @@ import { validState } from '../web/client.mjs';
 
 async function withServer(port, fail, check) {
   const child = spawn(process.execPath, [new URL('../tools/preview-server.mjs', import.meta.url).pathname], {
-    env: { ...process.env, ESP32_PREVIEW_PORT: String(port), ESP32_SIMULATE_STORAGE_FAILURE: fail ? '1' : '0' },
+    env: { ...process.env, ESP32_PREVIEW_PORT: String(port),
+      ESP32_SIMULATE_STORAGE_FAILURE: fail === true ? '1' : '0',
+      ESP32_SIMULATE_STORAGE_UNKNOWN: fail === 'unknown' ? '1' : '0' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let errors = '';
@@ -109,6 +111,31 @@ test('preview storage fault returns 503 and retains both original thresholds', a
     assert.equal(response.status, 503);
     assert.equal((await response.json()).error.code, 'STORAGE_FAILURE');
     assert.deepEqual(await (await fetch(`${base}/api/v1/state`)).json(), before);
+  });
+});
+
+test('preview unknown storage outcome blocks future saves but keeps manual control', async () => {
+  await withServer(18316, 'unknown', async (base, put) => {
+    const before = await (await fetch(`${base}/api/v1/state`)).json();
+    assert.equal((await put({ onThresholdC: 30, offThresholdC: 28 })).status, 200);
+    const reply = await put({ onThresholdC: 35, offThresholdC: 32 });
+    assert.equal(reply.status, 503);
+    assert.equal((await reply.json()).error.code, 'STORAGE_UNKNOWN');
+    const blocked = await (await fetch(`${base}/api/v1/state`)).json();
+    assert.deepEqual(blocked, { ...before, revision: before.revision + 1, configSaveBlocked: true });
+    assert.equal(validState(blocked), true);
+    for (const value of [{ onThresholdC: 30, offThresholdC: 28 }, { onThresholdC: 40, offThresholdC: 38 }]) {
+      const again = await put(value);
+      assert.equal(again.status, 503);
+      assert.equal((await again.json()).error.code, 'STORAGE_UNKNOWN');
+    }
+    assert.deepEqual(await (await fetch(`${base}/api/v1/state`)).json(), blocked);
+    const manual = await fetch(`${base}/api/v1/power`, { method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: true }) });
+    assert.equal(manual.status, 200);
+    const controlled = await manual.json();
+    assert.equal(controlled.fanOutputOn, true);
+    assert.equal(controlled.configSaveBlocked, true);
   });
 });
 

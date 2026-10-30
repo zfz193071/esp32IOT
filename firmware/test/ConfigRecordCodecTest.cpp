@@ -66,12 +66,12 @@ public:
         return status == ReadResult::Found
             ? decodeConfigRecord(bytes.data(), bytes.size(), record) : status;
     }
-    bool replaceAtomically(const ConfigRecord& record) override {
+    PersistenceResult replace(const ConfigRecord& record) override {
         ++writes;
         EncodedConfigRecord encoded;
-        if (failWrite || !encodeConfigRecord(record, encoded)) return false;
+        if (failWrite || !encodeConfigRecord(record, encoded)) return PersistenceResult::Failed;
         seed(encoded);
-        return true;
+        return PersistenceResult::Saved;
     }
 };
 

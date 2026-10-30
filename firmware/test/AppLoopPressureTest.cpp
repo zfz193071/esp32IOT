@@ -12,7 +12,7 @@ void check(bool condition, const char* rule) {
 
 struct Storage : ConfigPersistence {
     ReadResult read(ConfigRecord&) override { return ReadResult::Missing; }
-    bool replaceAtomically(const ConfigRecord&) override { return true; }
+    PersistenceResult replace(const ConfigRecord&) override { return PersistenceResult::Saved; }
 };
 struct Output : OutputPort {
     bool fan = true;

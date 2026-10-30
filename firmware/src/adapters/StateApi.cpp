@@ -104,6 +104,7 @@ StateResponse handleStateRequest(const std::string& method, const std::string& p
     else out << "null";
     out << ",\"onThresholdC\":" << state.onThresholdC
         << ",\"offThresholdC\":" << state.offThresholdC
+        << ",\"configSaveBlocked\":" << state.configSaveBlocked
         << ",\"fault\":\"" << faultName(state.fault) << '"'
         << ",\"lastCommandSource\":\"" << sourceName(state.lastCommandSource) << '"'
         << ",\"wifiConnected\":" << state.wifiConnected << '}';

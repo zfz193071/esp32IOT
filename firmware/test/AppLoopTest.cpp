@@ -21,6 +21,7 @@ struct Storage : ConfigPersistence {
     unsigned loads = 0;
     unsigned saves = 0;
     bool failSave = false;
+    bool unknownSave = false;
     explicit Storage(Outputs& output) : out(output) {}
     ReadResult read(ConfigRecord& record) override {
         check(out.ready && !out.fan && !out.led, "hardware off and LED off precede storage access");
@@ -29,7 +30,11 @@ struct Storage : ConfigPersistence {
         record.thresholds.offThresholdC = 30;
         return ReadResult::Found;
     }
-    bool replaceAtomically(const ConfigRecord&) override { ++saves; return !failSave; }
+    PersistenceResult replace(const ConfigRecord&) override {
+        ++saves;
+        if (unknownSave) return PersistenceResult::Unknown;
+        return failSave ? PersistenceResult::Failed : PersistenceResult::Saved;
+    }
 };
 struct Diagnostics : DiagnosticPort {
     unsigned boots = 0, changes = 0, networkEvents = 0, temperatureEvents = 0;
@@ -368,6 +373,19 @@ int main() {
     check(regressionOut.fan && regression.snapshot().mode == Mode::Manual &&
               regression.snapshot().fault == Fault::None,
           "sensor recovery clears fault without undoing the later manual command");
+    regressionDisk.unknownSave = true;
+    const auto changesBeforeUnknown = regressionLog.changes;
+    const auto unknownConfig = request("/api/v1/config", "{\"onThresholdC\":40,\"offThresholdC\":38}");
+    regressionApi.requests.push_back(unknownConfig); regression.step(2010, false);
+    check(regressionApi.responses.back().status == 503 && regressionOut.fan &&
+              regression.snapshot().configSaveBlocked && regression.snapshot().onThresholdC == 45 &&
+              regressionLog.changes == changesBeforeUnknown + 1,
+          "unknown save records its blocked status without changing physical output or thresholds");
+    const auto savesAfterUnknown = regressionDisk.saves;
+    regressionApi.requests.push_back(unknownConfig); regression.step(2020, false);
+    check(regressionLog.changes == changesBeforeUnknown + 1 &&
+              regressionDisk.saves == savesAfterUnknown,
+          "repeated uncertain save neither rewrites storage nor floods diagnostics");
     mvpSoftwareRehearsal();
     std::cout << "PASS: AppLoop startup, bounded scheduling, final outputs and API integration (host only)\n";
 }

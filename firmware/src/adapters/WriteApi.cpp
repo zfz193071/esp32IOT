@@ -199,6 +199,8 @@ StateResponse handleWriteRequest(const WriteRequest& request, const WritePolicy&
         return error(503, "STATE_UNAVAILABLE", "State unavailable");
     if (request.path == "/api/v1/config") {
         const auto result = controller.setConfig(store, command.config);
+        if (result == SaveResult::StorageUnknown)
+            return error(503, "STORAGE_UNKNOWN", "Save outcome unknown; restart to verify stored configuration");
         if (result == SaveResult::StorageFailure || result == SaveResult::NotLoaded)
             return error(503, "STORAGE_FAILURE", "Configuration not saved");
         if (result == SaveResult::Invalid) return error(400, "INVALID_REQUEST", "Invalid configuration");

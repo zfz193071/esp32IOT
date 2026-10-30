@@ -1,4 +1,4 @@
-import { DeviceClient } from './client.mjs';
+import { DeviceClient, storageUnknownMessage } from './client.mjs';
 import { ConfigDraft } from './config.mjs';
 
 const byId = (id) => document.getElementById(id);
@@ -30,6 +30,11 @@ const client = new DeviceClient({ onChange: ({ state, connected, busy, message, 
     }
   }
   for (const id of ['threshold-on', 'threshold-off', 'save-config', 'reset-config']) byId(id).disabled = !usable;
+  byId('save-config').disabled = !usable || state?.configSaveBlocked === true;
+  if (state?.configSaveBlocked) byId('config-feedback').textContent = storageUnknownMessage;
+  else if (byId('config-feedback').textContent === storageUnknownMessage) {
+    byId('config-feedback').textContent = '已同步重启后的设备阈值，请核对；编辑值不会自动保存。';
+  }
   byId('source').textContent = state ? sourceNames[state.lastCommandSource] : '—';
   byId('fault').hidden = state?.fault !== 'temperature_unavailable';
   for (const id of ['power-on', 'power-off', 'manual']) byId(id).disabled = !usable;
@@ -58,7 +63,7 @@ byId('reset-config').addEventListener('click', () => {
 });
 byId('config-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (client.busy || !client.connected) return;
+  if (client.busy || !client.connected || client.state.configSaveBlocked) return;
   draft.edit(byId('threshold-on').value, byId('threshold-off').value);
   const value = draft.value();
   if (!value) {
@@ -71,6 +76,8 @@ byId('config-form').addEventListener('submit', async (event) => {
   if (accepted && client.connected && client.state.bootId === bootId && draft.confirm(value)) {
     showDraft();
     byId('config-feedback').textContent = '设备已确认保存，当前阈值已同步。';
+  } else if (client.state.configSaveBlocked) {
+    byId('config-feedback').textContent = storageUnknownMessage;
   } else {
     byId('config-feedback').textContent = '本次保存未确认。编辑值已保留，请核对设备当前阈值和同步提示；不会自动重发。';
   }

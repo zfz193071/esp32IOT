@@ -5,7 +5,7 @@ import { DeviceClient } from '../web/client.mjs';
 const state = (changes = {}) => ({ bootId: 'boot-a', revision: 0, mode: 'manual',
   fanOutputOn: false, temperatureC: null, sensorStatus: 'initializing', sampleAgeMs: null,
   onThresholdC: 30, offThresholdC: 28, fault: 'none', lastCommandSource: 'system',
-  wifiConnected: true, ...changes });
+  wifiConnected: true, configSaveBlocked: false, ...changes });
 const response = (body, status = 200) => ({ ok: status === 200, status, json: async () => body });
 function pending() {
   let resolve;
@@ -129,6 +129,7 @@ test('inconsistent device snapshots cannot replace the last confirmed state', as
       fault: 'temperature_unavailable' },
     { bootId: '设备启动' },
     { bootId: 'x'.repeat(129) },
+    { configSaveBlocked: undefined }, { configSaveBlocked: 'false' },
   ];
   for (const change of invalid) {
     const refresh = h.client.refresh();
@@ -204,6 +205,68 @@ test('storage failure never reports acceptance or changes confirmed configuratio
   assert.match(h.client.message, /保存失败/);
 });
 
+test('unknown save blocks config until verified restart while manual control remains usable', async () => {
+  const h = harness(); await connect(h);
+  const value = { onThresholdC: 35, offThresholdC: 32 };
+  const write = h.client.write('config', value);
+  h.calls[1].resolve(response({ error: { code: 'STORAGE_UNKNOWN' } }, 503));
+  await settle();
+  const blocked = state({ revision: 1, configSaveBlocked: true });
+  h.calls[2].resolve(response(blocked));
+  assert.equal(await write, false);
+  assert.deepEqual(h.client.state, blocked);
+  assert.match(h.client.message, /保存结果未知/);
+  assert.match(h.client.message, /重启设备/);
+  assert.equal(await h.client.write('config', value), false);
+  assert.equal(h.calls.length, 3);
+  const manual = h.client.write('power', true);
+  const on = { ...blocked, revision: 2, fanOutputOn: true };
+  h.calls.at(-1).resolve(response(on)); await settle();
+  h.calls.at(-1).resolve(response(on));
+  assert.equal(await manual, true);
+  assert.match(h.client.message, /已暂停配置保存/);
+  const unexpectedUnlock = h.client.refresh();
+  h.calls.at(-1).resolve(response({ ...on, revision: 3, configSaveBlocked: false }));
+  assert.equal(await unexpectedUnlock, false);
+  assert.equal(h.client.state.configSaveBlocked, true);
+  const reboot = h.client.refresh();
+  h.calls.at(-1).resolve(response(state({ bootId: 'boot-b', ...value })));
+  assert.equal(await reboot, true);
+  assert.equal(h.client.state.configSaveBlocked, false);
+  assert.match(h.client.message, /已重启/);
+  assert.equal(h.calls.filter((call) => call.path === '/api/v1/config').length, 1);
+  const explicitSave = h.client.write('config', { onThresholdC: 40, offThresholdC: 38 });
+  const saved = state({ bootId: 'boot-b', revision: 1, onThresholdC: 40, offThresholdC: 38 });
+  h.calls.at(-1).resolve(response(saved)); await settle();
+  h.calls.at(-1).resolve(response(saved));
+  assert.equal(await explicitSave, true);
+});
+
+test('first poll exposes blocked storage to a newly opened page', async () => {
+  const h = harness();
+  const poll = h.client.refresh();
+  h.calls[0].resolve(response(state({ revision: 7, configSaveBlocked: true })));
+  assert.equal(await poll, true);
+  assert.equal(await h.client.write('config', { onThresholdC: 35, offThresholdC: 32 }), false);
+  assert.equal(h.calls.length, 1);
+  assert.match(h.client.message, /保存结果未知/);
+});
+
+test('unknown save with failed recovery stays unconfirmed and never replays', async () => {
+  const h = harness(); await connect(h);
+  const write = h.client.write('config', { onThresholdC: 35, offThresholdC: 32 });
+  h.calls[1].resolve(response({ error: { code: 'STORAGE_UNKNOWN' } }, 503));
+  await settle();
+  h.calls[2].resolve(response({ error: { code: 'STATE_UNAVAILABLE' } }, 503));
+  assert.equal(await write, false);
+  assert.equal(h.client.connected, false);
+  assert.equal(h.client.busy, false);
+  assert.match(h.client.message, /保存结果未知/);
+  assert.deepEqual(h.client.state, state());
+  assert.equal(await h.client.write('config', { onThresholdC: 40, offThresholdC: 38 }), false);
+  assert.equal(h.calls.filter((call) => call.init.method === 'PUT').length, 1);
+});
+
 test('a reboot observed in a write response retires the old boot before resynchronizing', async () => {
   const h = harness(); await connect(h);
   const write = h.client.write('power', true);
@@ -243,7 +306,7 @@ test('a retired boot in a write response does not retire the current boot', asyn
 test('equal revision cannot change control fields but may refresh sample age', async () => {
   const h = harness(); await connect(h);
   for (const change of [{ fanOutputOn: true }, { onThresholdC: 35 },
-    { lastCommandSource: 'web' }, { wifiConnected: false },
+    { lastCommandSource: 'web' }, { wifiConnected: false }, { configSaveBlocked: true },
     { sensorStatus: 'invalid' }]) {
     const read = h.client.refresh();
     h.calls.at(-1).resolve(response(state(change)));

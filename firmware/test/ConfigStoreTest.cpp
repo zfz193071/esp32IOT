@@ -32,12 +32,12 @@ public:
         if (status == ReadResult::Found) destination = record;
         return status;
     }
-    bool replaceAtomically(const ConfigRecord& next) override {
+    PersistenceResult replace(const ConfigRecord& next) override {
         ++writes;
-        if (failWrite) return false;
+        if (failWrite) return PersistenceResult::Failed;
         record = next;
         status = ReadResult::Found;
-        return true;
+        return PersistenceResult::Saved;
     }
 };
 

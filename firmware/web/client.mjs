@@ -2,7 +2,9 @@ import { validConfig } from './config.mjs';
 
 // These fields advance the device revision; sampleAgeMs alone does not.
 const revisionFields = ['mode', 'fanOutputOn', 'temperatureC', 'sensorStatus',
-  'onThresholdC', 'offThresholdC', 'fault', 'lastCommandSource', 'wifiConnected'];
+  'onThresholdC', 'offThresholdC', 'configSaveBlocked', 'fault', 'lastCommandSource', 'wifiConnected'];
+
+export const storageUnknownMessage = '保存结果未知，设备当前仍使用原阈值；已暂停配置保存，请重启设备后核实实际保存值';
 
 export function validState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
@@ -22,7 +24,7 @@ export function validState(s) {
     (s.mode !== 'auto' || (healthy && s.fault === 'none')) &&
     (!healthy || s.fault === 'none') &&
     ['button', 'infrared', 'web', 'system'].includes(s.lastCommandSource) &&
-    typeof s.wifiConnected === 'boolean';
+    typeof s.wifiConnected === 'boolean' && typeof s.configSaveBlocked === 'boolean';
 }
 
 export class DeviceClient {
@@ -66,10 +68,11 @@ export class DeviceClient {
         const body = await response.json();
         if (!response.ok) {
           const storageFailure = response.status === 503 && body?.error?.code === 'STORAGE_FAILURE';
-          const error = new Error(storageFailure ? '保存失败，设备保留原配置' :
+          const storageUnknown = response.status === 503 && body?.error?.code === 'STORAGE_UNKNOWN';
+          const error = new Error(storageUnknown ? storageUnknownMessage : storageFailure ? '保存失败，设备保留原配置' :
             body?.error?.code === 'TEMPERATURE_UNAVAILABLE'
               ? '温度不可用，无法开启自动模式' : `设备拒绝请求（${response.status}）`);
-          error.rejected = storageFailure || (response.status >= 400 && response.status < 500);
+          error.rejected = storageUnknown || storageFailure || (response.status >= 400 && response.status < 500);
           throw error;
         }
         if (!validState(body)) throw new Error('设备状态格式无效');
@@ -84,6 +87,8 @@ export class DeviceClient {
     if (this.retiredBoots.has(next.bootId)) return false;
     if (this.state && next.bootId === this.state.bootId &&
         next.revision < this.state.revision) return false;
+    if (this.state && next.bootId === this.state.bootId &&
+        this.state.configSaveBlocked && !next.configSaveBlocked) return false;
     if (this.state && next.bootId === this.state.bootId &&
         next.revision === this.state.revision &&
         revisionFields.some((field) => next[field] !== this.state[field])) return false;
@@ -106,7 +111,8 @@ export class DeviceClient {
       if (epoch !== this.epoch || id !== this.readId) return false;
       const rebooted = this.state && this.state.bootId !== next.bootId;
       if (!this.apply(next)) throw new Error('收到旧状态或版本冲突，等待重新同步');
-      this.message = rebooted ? '设备已重启，已同步新状态' : '状态已同步';
+      this.message = next.configSaveBlocked ? storageUnknownMessage :
+        rebooted ? '设备已重启，已同步新状态' : '状态已同步';
       return true;
     } catch (error) {
       if (epoch !== this.epoch || id !== this.readId) return false;
@@ -121,6 +127,7 @@ export class DeviceClient {
 
   async write(kind, value) {
     if (this.busy || !this.connected) return false;
+    if (kind === 'config' && this.state.configSaveBlocked) return false;
     if (!((kind === 'power' && typeof value === 'boolean') ||
           (kind === 'mode' && ['manual', 'auto'].includes(value)) ||
           (kind === 'config' && validConfig(value)))) return false;

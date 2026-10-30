@@ -17,7 +17,7 @@ class MemoryPersistence : public ConfigPersistence {
 public:
     bool fail = false;
     ReadResult read(ConfigRecord&) override { return ReadResult::Missing; }
-    bool replaceAtomically(const ConfigRecord&) override { return !fail; }
+    PersistenceResult replace(const ConfigRecord&) override { return fail ? PersistenceResult::Failed : PersistenceResult::Saved; }
 };
 
 int main() {

@@ -18,6 +18,7 @@ bool sameConfig(const TemperatureConfig& a, const TemperatureConfig& b) {
 ConfigStore::ConfigStore(ConfigPersistence& persistence) : persistence_(persistence) {}
 
 LoadResult ConfigStore::load() {
+    if (loaded_) return loadResult_;
     ConfigRecord record;
     const auto result = persistence_.read(record);
     config_ = TemperatureConfig{};
@@ -25,16 +26,16 @@ LoadResult ConfigStore::load() {
     writable_ = result != ReadResult::Unavailable;
     switch (result) {
     case ReadResult::Missing:
-        return LoadResult::MissingDefaults;
+        return loadResult_ = LoadResult::MissingDefaults;
     case ReadResult::Corrupt:
-        return LoadResult::CorruptDefaults;
+        return loadResult_ = LoadResult::CorruptDefaults;
     case ReadResult::Unavailable:
-        return LoadResult::ReadFailureDefaults;
+        return loadResult_ = LoadResult::ReadFailureDefaults;
     case ReadResult::Found:
-        if (record.version != 1) return LoadResult::VersionDefaults;
-        if (!validConfig(record.thresholds)) return LoadResult::CorruptDefaults;
+        if (record.version != 1) return loadResult_ = LoadResult::VersionDefaults;
+        if (!validConfig(record.thresholds)) return loadResult_ = LoadResult::CorruptDefaults;
         config_ = record.thresholds;
-        return LoadResult::Loaded;
+        return loadResult_ = LoadResult::Loaded;
     }
     writable_ = false;
     return LoadResult::ReadFailureDefaults;
@@ -45,11 +46,17 @@ TemperatureConfig ConfigStore::current() const { return config_; }
 SaveResult ConfigStore::save(const TemperatureConfig& config) {
     if (!validConfig(config)) return SaveResult::Invalid;
     if (!loaded_) return SaveResult::NotLoaded;
+    if (uncertain_) return SaveResult::StorageUnknown;
     if (!writable_) return SaveResult::StorageFailure;
     if (sameConfig(config, config_)) return SaveResult::Unchanged;
     ConfigRecord record;
     record.thresholds = config;
-    if (!persistence_.replaceAtomically(record)) return SaveResult::StorageFailure;
+    const auto result = persistence_.replace(record);
+    if (result == PersistenceResult::Failed) return SaveResult::StorageFailure;
+    if (result != PersistenceResult::Saved) {
+        uncertain_ = true;
+        return SaveResult::StorageUnknown;
+    }
     config_ = config;
     return SaveResult::Saved;
 }

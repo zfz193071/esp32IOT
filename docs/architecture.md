@@ -51,6 +51,7 @@ FanController 不依赖 Wi-Fi、HTTP、红外库或具体 GPIO。硬件和通信
 | `sensorStatus` | `initializing`、`ok`、`invalid`、`stale` |
 | `sampleAgeMs` | 距离最近有效采样的时间；尚无有效样本时为 `null` |
 | `onThresholdC` / `offThresholdC` | 自动模式的开启／关闭阈值 |
+| `configSaveBlocked` | 保存结果未知后为 true，本次运行暂停配置保存，重启读取后恢复 |
 | `fault` | `none` 或 `temperature_unavailable`，表示已触发的温控故障 |
 | `lastCommandSource` | `button`、`infrared`、`web`、`system` |
 | `wifiConnected` | 网络连接状态，不决定电机输出 |
@@ -86,7 +87,7 @@ FanController 不依赖 Wi-Fi、HTTP、红外库或具体 GPIO。硬件和通信
 
 配置默认允许 0～60℃，关闭阈值至少比开启阈值低 1℃。这是桌面实验的产品限制，不是传感器量程。
 
-成功返回 200 与状态快照；格式或范围错误返回 400；温度不可用却请求自动模式返回 409；持久化失败返回 503，保留旧配置。错误体为 `{"error":{"code":"TEMPERATURE_UNAVAILABLE","message":"当前温度不可用"}}` 等稳定结构。
+成功返回 200 与状态快照；格式或范围错误返回 400；温度不可用却请求自动模式返回 409。持久化明确失败返回 503 `STORAGE_FAILURE`，保留旧配置；保存结果未知返回 503 `STORAGE_UNKNOWN`，当前继续使用旧阈值，并将 `configSaveBlocked` 置为 true、推进一次 revision，本次运行不再接受配置保存。开关和模式控制仍可用；重启后读取实际保存值，手动关闭启动。未知结果语义由用户于 2026-10-30 确认。错误体仍为 `{"error":{"code":"...","message":"..."}}`。
 
 网页每次仅允许一个写请求在途，写操作后刷新状态，不乐观宣称电机已开启。请求超时显示“结果未知，正在同步”，恢复后读取状态；不自动重放过期命令。轮询与写响应以 `bootId`、`revision` 避免旧响应覆盖新状态，检测到重启时重新同步。
 
