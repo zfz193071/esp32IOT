@@ -15,6 +15,21 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
 
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/src" \
+    "$firmware_dir/src/board/BoardProfile.cpp" \
+    "$firmware_dir/test/BoardProfileTest.cpp" \
+    -o "$build_dir/board-profile-test"
+"$build_dir/board-profile-test"
+
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" \
+    "$firmware_dir/src/board/BoardProfile.cpp" \
+    "$firmware_dir/src/board/BoardIoAdapter.cpp" \
+    "$firmware_dir/test/BoardIoAdapterTest.cpp" \
+    -o "$build_dir/board-io-adapter-test"
+"$build_dir/board-io-adapter-test"
+
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" \
     "$firmware_dir/src/domain/FanController.cpp" \
     "$firmware_dir/src/config/ConfigStore.cpp" \
     "$firmware_dir/test/FanControllerTest.cpp" \
