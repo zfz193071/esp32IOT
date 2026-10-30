@@ -62,6 +62,9 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 
 ## 本轮结果
 
+2026-10-30，ESP-004 增加 Arduino GPIO 端口的主机桩验证；修正预置电平实现后运行 `sh firmware/test/run-host-tests.sh` 退出 0：14 个 C++ 测试程序、23 项 Node 测试通过，模拟 HTTP 测试按默认入口跳过。新增测试覆盖关闭电平先于输出模式、输入上拉及电平读写。串口最小程序尚未使用实际 Arduino-ESP32 工具链编译或烧录。
+
+
 2026-10-30，新增 BoardProfile 和 GPIO 端口适配的主机测试，运行 `sh firmware/test/run-host-tests.sh` 退出 0：13 个 C++ 测试程序、23 项 Node 测试通过；可选模拟 HTTP 未运行。新增测试覆盖缺失／冲突／不可用引脚拒绝、M4／M5 温度能力、无效配置不触碰 GPIO、风扇先关闭的初始化顺序、按键和输出极性。此结果不代表 Arduino 工具链、GPIO 电平或实物电机验证。
 
 
