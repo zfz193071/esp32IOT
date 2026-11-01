@@ -79,6 +79,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 
 ## 本轮结果
 
+2026-11-01，核对 6 张主板近照后新增 ROM 识别工具、增强 SerialBringup 并扩展构建入口。串口枚举和不打开设备的 dry-run 成功；烟测验证无参数、写／擦子命令、额外复位参数、非串口路径和未知 sketch 均拒绝。本机 esptool 5.1.0 的命令帮助接受固定只读参数。SerialBringup 和默认 CompileCheck 两个入口均在真实 Arduino-ESP32 3.3.3 参考目标编译／链接通过，分别占用 279,031 / 1,198,123 字节程序空间，静态全局数据 20,792 / 50,068 字节。默认集成产物目录 `firmware/build/arduino-check/build-JDTMK6/`；串口产物见[识别说明](serial-bringup.md)。本轮未修改业务控制代码，未重跑主机业务／TCP／模拟 HTTP 套件；未执行实际 ROM 读取、烧录或设备运行验证。
+
 2026-11-01，新增隔离 Arduino 工具链及编译入口后，`sh firmware/test/run-host-tests.sh` 退出 0：21 个 C++ 测试程序和 26 项 Node 测试通过。`node firmware/tools/setup-arduino.mjs` 与 `node firmware/tools/build-arduino.mjs` 均退出 0，使用 Arduino CLI 1.5.1、Arduino-ESP32 3.3.3 在 macOS x86_64 完成通用 `esp32:esp32:esp32` 目标的真实编译／链接，全部 21 个生产 C++ 文件生成目标文件。产物、占用与摘要见[参考目标编译记录](arduino-reference-build.md)。未修改生产控制逻辑，本轮未重跑可选模拟 HTTP／回环 TCP；参考目标不代表实际选板，未烧录或进行设备验证。
 
 2026-11-01，新增 NetworkHttpApi 并接入 AppLoop 后，`sh firmware/test/run-host-tests.sh` 退出 0：21 个 C++ 测试程序、26 项 Node 测试全部通过。生命周期测试覆盖地址变化、各请求阶段清理、旧响应丢弃、首次立即监听、5 秒重试与跨断网限频、时钟回绕、构造／销毁、每轮一次网络观察，以及等待恢复期间的按键和温度采集。`sh firmware/test/run-socket-tests.sh` 在已授权回环监听环境退出 0，真实 C++ TCP 路径已切换为 NetworkHttpApi，由模拟无线断开／同 IP 重连自动停止和恢复监听，网页／API 仍通过。未运行未修改的 Node 模拟 HTTP；未进行 ESP32 编译、烧录或实物验证。

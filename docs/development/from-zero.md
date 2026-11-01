@@ -30,6 +30,8 @@ node firmware/tools/embed-web.mjs
 
 在实物板型尚未确认时，可使用 [Arduino-ESP32 参考目标编译](arduino-reference-build.md)检查真实 SDK 兼容性。该入口在项目忽略目录安装固定工具链、重新生成网页并编译所有生产模块；编译目标不代表实际选板，脚本不执行烧录。
 
+已有 USB-C + CH340C 实物证据后，按[板卡识别与串口最小程序](serial-bringup.md)先列出串口，再通过 ROM 读取实际芯片／Flash。容量不必凭金属罩照片推断；读取前必须明确设备端口并按说明进入下载模式。
+
 ## 3. 本机预览手机控制页
 
 在独立终端执行：

@@ -17,9 +17,11 @@ CLI 归档及核心归档的 SHA-256 固定在配置中。脚本从 Arduino 官�
 ```sh
 node firmware/tools/setup-arduino.mjs
 node firmware/tools/build-arduino.mjs
+# 独立串口诊断（只编译，不装配业务模块）：
+node firmware/tools/build-arduino.mjs --sketch SerialBringup
 ```
 
-安装入口会下载／安装依赖；构建入口不安装或升级工具。CLI 或已安装核心版本不匹配时构建拒绝继续，先按提示修复隔离安装。不要并发运行多个安装过程。
+安装入口会下载／安装依赖；构建入口不安装或升级工具。无参数或 `--sketch CompileCheck` 构建业务集成检查；`--sketch SerialBringup` 仅复制独立串口程序，输入清单的生产源码列表为空、网页清单为 null。其他入口名会被拒绝。两种入口均为参考目标，无串口探测或上传。CLI 或已安装核心版本不匹配时构建拒绝继续，先按提示修复隔离安装。不要并发运行多个安装过程。
 
 每次构建在 `firmware/build/arduino-check/build-*/` 创建新的装配目录，包括：
 
