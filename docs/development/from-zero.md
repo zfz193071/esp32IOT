@@ -1,6 +1,6 @@
 # 从零运行与排障指南
 
-这份指南对应 ESP-024。当前仓库可运行主机规则测试、网页资源生成和本机模拟预览；已有 BoardProfile 候选校验、Arduino GPIO 端口与独立[串口最小程序](serial-bringup.md)，但尚缺实物板型确认、电机驱动实测、真实温度与红外驱动、ESP32 HTTP 服务及完整业务固件。现在不能给出已验证的 ESP32 编译、烧录命令或接线图。实物信息确认后，按 [硬件清单](../hardware.md) 和 [联调流程](esp32-bringup.md) 补全，并从干净目录实测。
+这份指南对应 ESP-024。当前仓库可运行主机规则测试、网页资源生成、本机模拟预览，以及固定 Arduino-ESP32 工具链的[通用目标参考编译](arduino-reference-build.md)。参考编译已覆盖生产 C++ 模块、HTTP 适配和三个独立诊断程序；但尚缺实物板型确认、电机驱动实测、真实温度与红外驱动、已确认接线的完整业务固件和设备验收。实际板型的烧录命令与接线图须待实物信息确认后补全，依据见 [硬件清单](../hardware.md) 和 [联调流程](esp32-bringup.md)。
 
 ## 1. 取得代码与检查工具
 
@@ -13,7 +13,7 @@ node --version
 c++ --version
 ```
 
-没有 SSH 访问时，先在 GitHub 配置自己的访问方式；不要把令牌写进仓库或终端命令。主机测试需要支持 C++11 的编译器，以及支持 `node --test` 和内置 fetch 的 Node.js。2026-10-28 本机验证环境为 Node v22.19.0、Apple clang 15.0.0；这是测试记录，不是已锁定的 ESP32 工具链版本。若命令找不到，先安装对应工具并重新运行版本检查。仓库当前没有依赖安装步骤。
+没有 SSH 访问时，先在 GitHub 配置自己的访问方式；不要把令牌写进仓库或终端命令。主机测试需要支持 C++11 的编译器，以及支持 `node --test` 和内置 fetch 的 Node.js。2026-10-28 本机主机回归环境为 Node v22.19.0、Apple clang 15.0.0；ESP32 参考编译另固定 Arduino CLI 1.5.1 和 Arduino-ESP32 3.3.3，见[版本与隔离安装](arduino-reference-build.md)。若命令找不到，先安装对应工具并重新运行版本检查。主机回归不下载依赖；首次参考编译需安装固定工具链。
 
 ## 2. 验证可运行的软件
 
@@ -24,11 +24,21 @@ sh firmware/test/run-host-tests.sh
 node firmware/tools/embed-web.mjs
 ```
 
-前者应以 `PASS: requested host regression suites (no ESP32 hardware validation)` 结束；编译或规则失败会以非零状态退出，并指出失败项目。需要额外验证本机 HTTP 模拟配置接口时，运行 `sh firmware/test/run-host-tests.sh --with-preview`；它需要本地端口 18313 和 18314 空闲。详见 [回归覆盖清单](regression.md)。
+前者应以 `PASS: requested host regression suites (no ESP32 hardware validation)` 结束；编译或规则失败会以非零状态退出，并指出失败项目。需要额外验证本机 HTTP 模拟配置接口时，运行 `sh firmware/test/run-host-tests.sh --with-preview`；它需要本地端口 18313～18316 空闲。详见 [回归覆盖清单](regression.md)。
 
 第二条命令应报告嵌入 5 条网页路由，在被 Git 忽略的 `firmware/build/generated/` 生成 `WebAssets.h`、`WebAssets.cpp` 和 `web-manifest.json`。每次修改网页后重跑；它只生成 C++ 资源，尚未产生可烧录固件。生成文件内容与验证方式见 [网页资源说明](web-assets.md)。
 
-在实物板型尚未确认时，可使用 [Arduino-ESP32 参考目标编译](arduino-reference-build.md)检查真实 SDK 兼容性。该入口在项目忽略目录安装固定工具链、重新生成网页并编译所有生产模块；编译目标不代表实际选板，脚本不执行烧录。
+在实物板型尚未确认时，使用固定工具链检查真实 SDK 兼容性：
+
+```sh
+node firmware/tools/setup-arduino.mjs
+node firmware/tools/build-arduino.mjs
+node firmware/tools/build-arduino.mjs --sketch SerialBringup
+node firmware/tools/build-arduino.mjs --sketch WiFiBringup
+node firmware/tools/build-arduino.mjs --sketch ConfigBringup
+```
+
+首次安装需联网并预留数 GB；安装与编译输入均位于被忽略的 `firmware/build/`。无参数入口重新生成网页并编译全部生产模块；三个诊断入口分别检查启动串口、Wi-Fi 和 NVS 程序，其中 Wi-Fi 参考编译只使用仓库示例占位凭据。每次构建输出 PASS 和 `.bin` 路径才算通过；这些产物对应通用 `esp32:esp32:esp32` 参考目标，不能据此选择实际板型或直接烧录。详见[参考编译说明](arduino-reference-build.md)。
 
 已有 USB-C + CH340C 实物证据后，按[板卡识别与串口最小程序](serial-bringup.md)先列出串口，再通过 ROM 读取实际芯片／Flash。容量不必凭金属罩照片推断；读取前必须明确设备端口并按说明进入下载模式。
 
@@ -48,13 +58,13 @@ node firmware/tools/preview-server.mjs
 
 实物确认后按下列顺序推进，每一步记录固件提交、板型、构建工具版本和观察结果：
 
-1. ESP-004 锁定实际板型与 Arduino-ESP32 核心版本，补建板端构建入口和串口启动日志；电机保持断开，首次编译上传最小固件。
+1. ESP-004 通过 ROM 识别和实物资料核对实际芯片、Flash 与选板参数；电机保持断开，按实际目标编译上传最小固件，观察串口启动日志。
 2. ESP-005／007 核对按键与 LED 的 GPIO、有效电平及电机驱动上电关闭方案；先验证输入与 LED，再按已确认的供电方案接入电机。
 3. ESP-009／010 实测遥控协议、地址、命令码和重复周期，再配置红外映射；不使用主机测试中的合成编码。
-4. ESP-011～016 接入真实 Wi-Fi 与 HTTP 服务，将生成的网页资源编译进固件；串口记录设备实际 IP，用处于同一 Wi-Fi 的手机访问该 IP。
-5. ESP-017～021 接入真实温度器件和持久化；验证回差、失效关闭、手动接管、保存与重启恢复。最后按 [压力与连续运行验收](pressure-validation.md) 执行 ESP-023。
+4. ESP-011～016 在已确认接线的完整固件中接入现有 Wi-Fi／HTTP 适配及网页资源；串口记录设备实际 IP，用处于同一 Wi-Fi 的手机访问该 IP。
+5. ESP-017～021 接入真实温度器件，并在设备上验证现有 NVS 适配、回差、失效关闭、手动接管、保存与重启恢复。最后按 [压力与连续运行验收](pressure-validation.md) 执行 ESP-023。
 
-把 `firmware/config/wifi.example.h` 复制为同目录 `wifi.local.h` 并填写本地凭据；该文件已被 Git 忽略。独立的 `firmware/arduino/WiFiBringup/WiFiBringup.ino` 会在板端编译时读取它；主机测试与模拟预览不会读取它。串口和报告不要打印密码。网页显示的开关状态是控制信号状态，不代表检测到电机实际转速。
+准备真实 Wi-Fi 诊断时，把 `firmware/config/wifi.example.h` 复制为同目录 `wifi.local.h` 并填写本地凭据；该文件已被 Git 忽略。独立的 `firmware/arduino/WiFiBringup/WiFiBringup.ino` 原位编译时读取它；上述隔离参考编译使用示例占位值，主机测试与模拟预览不会读取它。串口和报告不要打印密码。网页显示的开关状态是控制信号状态，不代表检测到电机实际转速。
 
 ## 5. 按现象排查
 
@@ -69,6 +79,6 @@ node firmware/tools/preview-server.mjs
 | 按键／红外不响应 | 已验证的引脚、电平、红外协议／地址／码、串口输入事件 | 先看输入是否产生事件，再看控制器来源和输出；ESP-005、009、010 分别处理 |
 | 电机不转、复位时误转或 LED 不一致 | **先断开电机供电**，核对驱动、电压、电流、共地和启动默认关闭方案 | 核对 GPIO 控制信号与实际驱动输出；记录复位／烧录瞬态，ESP-002／007 处理。状态 JSON 不能证明风扇转动 |
 | 自动模式不可用或温度异常 | 传感器型号、接线、上拉、采样健康与年龄；页面是否显示有效温度 | 检查故障后自动退出、手动仍可用和恢复不自动重启，ESP-017～021 处理 |
-| 阈值保存失败或重启丢失 | 配置 API 返回值、板端存储适配是否已实现、存储初始化日志 | 检查两个阈值是否原子保存和重新加载；当前模拟预览只在内存保存，ESP-018／020 处理 |
+| 阈值保存失败或重启丢失 | 配置 API 返回值、NVS 初始化日志和 `configSaveBlocked` 状态 | 核对两个阈值的加载结果；保存结果未知时暂停后续保存并重启核实实际值。当前模拟预览只在内存保存，实物恢复由 ESP-018／020 验证 |
 
 每次排障记录触发动作、设备状态、串口时间线、固件提交与接线版本，再复测同一场景。硬件尚未核实或无法提供日志时，记录“未执行／待确认”，不写成已通过。
