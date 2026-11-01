@@ -20,6 +20,16 @@ sh firmware/test/run-host-tests.sh --with-preview
 
 该选项额外运行 PreviewApiTest，启动并清理自己的模拟进程，使用本地端口 18313～18316；端口需空闲，运行环境需允许监听本地网络。不要为测试终止其他进程。默认执行会明确打印该项 SKIP，不能把默认成功记录为模拟 HTTP 已通过。
 
+验证真实 C++ socket 驱动、网页发送和 AppLoop 联合路径：
+
+```sh
+sh firmware/test/run-socket-tests.sh
+# 或默认套件加真实 TCP：
+sh firmware/test/run-host-tests.sh --with-sockets
+```
+
+仅在 `127.0.0.1` 随机端口监听，与 Node 模拟服务无关。默认套件编译 BSD 驱动并运行 ESP32 关闭任务的主机线程／队列桩测试，TCP 测试单独明确 SKIP；两个可选参数可组合。TCP 测试仍不代表 ESP32 工具链和 Wi-Fi 验证。
+
 任一断言或编译失败会使脚本非零退出；C++ 输出 `FAIL: 规则说明`，Node 输出失败用例和断言位置。只有所有请求的套件通过才打印最后的 PASS。退出码 2 表示不支持的脚本参数。
 
 ## 自动覆盖清单
@@ -35,6 +45,8 @@ sh firmware/test/run-host-tests.sh --with-preview
 | 严格参数、来源拒绝、保存失败 | WriteApiTest.cpp | 已解析请求，不测 TCP/HTTP 字节解析 |
 | HTTP 分段／分帧、大小预算、超时和写接口串接 | HttpRequestParserTest.cpp | 原始内存字节，不测实际 TCP 和发送耗时 |
 | HTTP 单连接、静态资源、短写、超时及主循环接入 | HttpApiPortTest.cpp | 真实生成网页与 AppLoop，模拟传输端口；不测 TCP 或板端 I/O 耗时 |
+| ESP32 独立关闭任务、队列上限、申请失败及错误锁定 | Esp32SocketCloserTest.cpp | 默认运行；主机线程／FreeRTOS 桩，不测目标 SDK 时序 |
+| 真实 TCP 监听、分段读写、资源与 API、连接释放和重开 | SocketHttpTransportTest.cpp | 可选；真实回环 socket、AppLoop 和生成网页，不是 Wi-Fi 实物测试 |
 | 非阻塞采集调度、超时与恢复 | TemperatureServiceTest.cpp | 模拟采集，不测真实驱动耗时 |
 | 连接超时、重试节奏、断网继续控制 | NetworkServiceTest.cpp | 模拟无线端口 |
 | 红外精确映射、重复帧、过期及乱序 | InfraredInputTest.cpp | 合成编码，不测真实遥控协议 |
@@ -65,6 +77,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-11-01，新增 SocketHttpTransport 和 Esp32SocketCloser 后执行 `sh firmware/test/run-host-tests.sh`，退出 0：20 个 C++ 测试程序、26 项 Node 测试全部通过，并编译 BSD 驱动。另运行 `sh firmware/test/run-socket-tests.sh`：首次因沙箱禁止监听而报 EPERM，授权回环监听后退出 0。新增真实 TCP 测试验证全部资源字节、HEAD、写入与状态读取、跨源拒绝、截断半关闭、空闲客户端期间按键推进、端口冲突、256 字节驱动预算、延迟关闭和监听重开；关闭任务测试验证固定资源、停滞／错误与清理。本轮未改 Node 模拟器，未运行其可选 HTTP 测试；没有目标工具链编译或实物验证。
 
 2026-11-01，新增 HttpApiPort 后执行 `sh firmware/test/run-host-tests.sh`，退出 0：19 个 C++ 测试程序、26 项 Node 测试全部通过。新增连接测试以关闭异常／RTTI 的 C++11 严格告警构建，使用真实生成资源及 AppLoop，覆盖全部资源短写后的字节一致性、HEAD／路由／响应头、接收与响应期限和时钟回绕、收发失败、响应所有权与上限、网络关闭清理、慢读者期间按键接管，以及流水线命令不执行。首次测试漏掉按键启动释放消抖阶段，补齐测试时序后整套通过；控制规则未改。默认跳过 Node 模拟 HTTP；本轮没有真实 TCP、ESP32 工具链或设备验证。
 

@@ -2,12 +2,14 @@
 set -eu
 
 with_preview=false
-case "${1:-}" in
-    '') [ "$#" -eq 0 ] || { echo 'Unexpected empty argument' >&2; exit 2; } ;;
-    --with-preview) with_preview=true; shift ;;
-    *) echo 'Usage: sh firmware/test/run-host-tests.sh [--with-preview]' >&2; exit 2 ;;
-esac
-[ "$#" -eq 0 ] || { echo 'Too many arguments' >&2; exit 2; }
+with_sockets=false
+for option in "$@"; do
+    case "$option" in
+        --with-preview) with_preview=true ;;
+        --with-sockets) with_sockets=true ;;
+        *) echo 'Usage: sh firmware/test/run-host-tests.sh [--with-preview] [--with-sockets]' >&2; exit 2 ;;
+    esac
+done
 
 firmware_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 build_dir=$(mktemp -d "${TMPDIR:-/tmp}/esp32fan-test.XXXXXX")
@@ -41,6 +43,16 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
     "$firmware_dir/test/ArduinoNetworkPortTest.cpp" \
     -o "$build_dir/arduino-network-port-test"
 "$build_dir/arduino-network-port-test"
+
+# Compile the real BSD adapter even when localhost listeners are unavailable.
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" -c "$firmware_dir/src/board/SocketHttpTransport.cpp" \
+    -o "$build_dir/socket-http-transport.o"
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror -pthread \
+    -I "$firmware_dir/src" -I "$firmware_dir/test/rtos-stub" \
+    "$firmware_dir/test/Esp32SocketCloserTest.cpp" \
+    -o "$build_dir/esp32-socket-closer-test"
+"$build_dir/esp32-socket-closer-test"
 
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/src" \
@@ -202,5 +214,10 @@ if [ "$with_preview" = true ]; then
     node --test "$firmware_dir/test/PreviewApiTest.mjs"
 else
     echo 'SKIP: localhost preview HTTP tests (use --with-preview to include)'
+fi
+if [ "$with_sockets" = true ]; then
+    sh "$firmware_dir/test/run-socket-tests.sh"
+else
+    echo 'SKIP: real C++ localhost TCP tests (use --with-sockets to include)'
 fi
 echo 'PASS: requested host regression suites (no ESP32 hardware validation)'

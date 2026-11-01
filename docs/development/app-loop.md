@@ -31,7 +31,7 @@ OutputPort.initializeOff 的正确电平和 GPIO 初始化顺序属于 ESP-007�
 
 每轮温度与网络各一步、按键一次、红外最多一帧、API 最多一个，没有按请求队列长度循环处理。ApiPort.takeRequest 必须非阻塞，接收缓冲有界且限制每次读取量；sendResponse 必须有界排队，不能等待慢客户端读取。队列满时的拒绝／断开策略及实际毫秒预算仍由板端 HTTP 适配器实现，不能仅凭“一次调用”宣称所有 I/O 都不阻塞。
 
-ApiPort 只交付 API 路由。静态页面由 HTTP 适配器使用已生成的 WebAssets 单独提供，也要受处理预算限制。[HttpApiPort](http-connection.md) 已提供该装配：每轮在 step 前调用一次 poll，单客户端、读写每轮最多 256 字节，响应总期限 5000 ms；底层 HttpTransport 仍需实现真正非阻塞的 socket 操作。AppLoop 本身不是 TCP 服务，也没有替代 Arduino 的 setup/loop 启动入口。
+ApiPort 只交付 API 路由。静态页面由 HTTP 适配器使用已生成的 WebAssets 单独提供，也要受处理预算限制。[HttpApiPort 与 socket 驱动](http-connection.md) 已提供该装配：每轮在 step 前调用一次 poll，单客户端、读写每轮最多 256 字节，响应总期限 5000 ms；SocketHttpTransport 使用非阻塞 BSD socket，ESP32 的 close 交给固定任务。真实回环 TCP 验证通过，SDK 调度与设备耗时仍需实测。AppLoop 本身没有替代 Arduino 的 setup/loop 启动入口。
 
 ## 输出与日志
 
