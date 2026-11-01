@@ -146,6 +146,25 @@ node "$firmware_dir/tools/embed-web.mjs" "$build_dir/generated"
     -o "$build_dir/http-api-port-test"
 "$build_dir/http-api-port-test"
 
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror -fno-exceptions -fno-rtti \
+    -I "$firmware_dir/src" -I "$build_dir/generated" \
+    "$build_dir/generated/WebAssets.cpp" \
+    "$firmware_dir/src/adapters/NetworkHttpApi.cpp" \
+    "$firmware_dir/src/adapters/HttpApiPort.cpp" \
+    "$firmware_dir/src/adapters/HttpRequestParser.cpp" \
+    "$firmware_dir/src/app/AppLoop.cpp" \
+    "$firmware_dir/src/input/InfraredInput.cpp" \
+    "$firmware_dir/src/input/ButtonDebouncer.cpp" \
+    "$firmware_dir/src/services/NetworkService.cpp" \
+    "$firmware_dir/src/services/TemperatureService.cpp" \
+    "$firmware_dir/src/adapters/WriteApi.cpp" \
+    "$firmware_dir/src/adapters/StateApi.cpp" \
+    "$firmware_dir/src/config/ConfigStore.cpp" \
+    "$firmware_dir/src/domain/FanController.cpp" \
+    "$firmware_dir/test/NetworkHttpApiTest.cpp" \
+    -o "$build_dir/network-http-api-test"
+"$build_dir/network-http-api-test"
+
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/src" \
     "$firmware_dir/src/services/TemperatureService.cpp" \

@@ -1,4 +1,5 @@
 #include "board/SocketHttpTransport.h"
+#include "adapters/NetworkHttpApi.h"
 #include "WebAssets.h"
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -85,21 +86,31 @@ struct Log : DiagnosticPort {
     void network(const NetworkUpdate&) override {}
 };
 static WritePolicy policy() { WritePolicy p; p.allowedOrigins = {"http://fan.test"}; return p; }
+struct Radio : NetworkPort {
+    NetworkLink link = NetworkLink::Connected;
+    bool begin() override { link = NetworkLink::Connecting; return true; }
+    NetworkLink status() override { return link; }
+    std::string address() override { return "127.0.0.1"; }
+    void disconnect() override { link = NetworkLink::Disconnected; }
+};
 struct Server {
     Closer closer;
     SocketHttpTransport transport{closer};
-    HttpApiPort http{transport};
+    NetworkHttpApi http{transport, 0};
+    Radio radio;
+    NetworkService network{radio};
     Output output;
     Storage disk;
     ConfigStore store{disk};
     Log log;
-    AppLoop app{"tcp-test", store, output, log, 20, nullptr, nullptr, &http, policy()};
+    AppLoop app{"tcp-test", store, output, log, 20, nullptr, &network, &http, policy()};
     std::uint32_t time = 0;
     Server() {
         app.start();
-        check(transport.begin("127.0.0.1", 0), "listen on an ephemeral loopback port (requires local networking permission)");
+        step();
+        check(http.listening() && transport.port() != 0, "network-managed ephemeral loopback listener (requires local networking permission)");
     }
-    void step(bool pressed = false) { http.poll(time); app.step(time++, pressed); }
+    void step(bool pressed = false) { app.step(time++, pressed); }
     std::string exchange(const std::string& request, std::size_t fragment = 7, bool halfClose = false) {
         Client client(transport.port());
         std::size_t offset = 0;
@@ -161,8 +172,11 @@ static void httpIntegration() {
     server.time += 2000;
     for (unsigned i = 0; i < 10; ++i) server.step(false);
     check(server.exchange(get("/api/v1/state")).find("HTTP/1.1 200") == 0, "new client works after receive timeout");
-    server.http.stop(); server.transport.end();
-    check(server.transport.port() == 0 && server.transport.begin("127.0.0.1", 0), "explicit network stop and reopen");
+    server.radio.link = NetworkLink::Disconnected; server.step();
+    check(server.transport.port() == 0 && !server.http.listening(), "network loss automatically stops the listener");
+    server.time += 5000;
+    server.radio.link = NetworkLink::Connected; server.step();
+    check(server.http.listening() && server.transport.port() != 0, "same-IP reconnect automatically reopens listener");
     check(server.exchange(get("/api/v1/state")).find("HTTP/1.1 200") == 0, "HTTP works after listener restart");
 }
 static void transportLifecycle() {

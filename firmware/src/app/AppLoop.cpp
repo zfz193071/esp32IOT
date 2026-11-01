@@ -30,13 +30,15 @@ bool AppLoop::step(std::uint32_t nowMs, bool buttonPressed) {
         if (event.diagnostic != TemperatureDiagnostic::None) diagnostics_.temperature(event.diagnostic);
     }
     controller_.tick(nowMs);
+    NetworkUpdate networkUpdate;
     if (network_) {
-        const auto update = network_->update(nowMs);
-        controller_.setWifiConnected(update.connected);
+        networkUpdate = network_->update(nowMs);
+        controller_.setWifiConnected(networkUpdate.connected);
         // Rebuild from trusted static names, so an obsolete dynamic IP is removed.
         activePolicy_ = trustedPolicy_;
-        if (update.connected && !update.address.empty()) activePolicy_.allowedOrigins.push_back("http://" + update.address);
-        if (update.diagnostic != NetworkDiagnostic::None) diagnostics_.network(update);
+        if (networkUpdate.connected && !networkUpdate.address.empty())
+            activePolicy_.allowedOrigins.push_back("http://" + networkUpdate.address);
+        if (networkUpdate.diagnostic != NetworkDiagnostic::None) diagnostics_.network(networkUpdate);
     }
     if (button_.update(buttonPressed, nowMs)) controller_.toggleFromButton();
 
@@ -51,6 +53,7 @@ bool AppLoop::step(std::uint32_t nowMs, bool buttonPressed) {
 
     WriteRequest request;
     StateResponse response;
+    if (api_) api_->update(nowMs, networkUpdate);
     const bool hasRequest = api_ && api_->takeRequest(request);
     if (hasRequest) {
         if (request.path == "/api/v1/state") response = handleStateRequest(request.method, request.path, controller_.snapshot());

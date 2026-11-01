@@ -9,6 +9,7 @@ node "$firmware_dir/tools/embed-web.mjs" "$build_dir/generated"
     "$build_dir/generated/WebAssets.cpp" \
     "$firmware_dir/src/board/SocketHttpTransport.cpp" \
     "$firmware_dir/src/adapters/HttpApiPort.cpp" \
+    "$firmware_dir/src/adapters/NetworkHttpApi.cpp" \
     "$firmware_dir/src/adapters/HttpRequestParser.cpp" \
     "$firmware_dir/src/app/AppLoop.cpp" \
     "$firmware_dir/src/input/InfraredInput.cpp" \

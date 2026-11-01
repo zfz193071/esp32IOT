@@ -18,6 +18,9 @@ public:
 class ApiPort {
 public:
     virtual ~ApiPort() = default;
+    // Optional lifecycle/I/O step using the same trusted network observation as
+    // command admission. Called once per loop, before taking any request.
+    virtual void update(std::uint32_t, const NetworkUpdate&) {}
     // Nonblocking and bounded; returns at most one complete API request.
     // Static resources are handled separately by the board HTTP adapter.
     virtual bool takeRequest(WriteRequest& request) = 0;

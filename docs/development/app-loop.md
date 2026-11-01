@@ -24,14 +24,16 @@ OutputPort.initializeOff 的正确电平和 GPIO 初始化顺序属于 ESP-007�
 3. 有网络服务时推进一次连接状态，更新快照及受信任设备地址。
 4. 扫描按键消抖，产生一次按下事件时执行控制器切换。
 5. 有红外输入时读取最多一帧，经映射与重复帧过滤后提交控制器。
-6. 从 ApiPort 取最多一个完整 API 请求，执行 C++ 状态读取或写处理。
+6. 用同一轮网络结果调用 ApiPort.update，推进 HTTP 生命周期及有限 I/O，再取最多一个完整 API 请求，执行 C++ 状态读取或写处理。
 7. 按最终快照提交风扇和 LED，随后记录变化，再返回 API 响应。
 
 同轮同时观察到按键和 API 时，先处理按键，再处理红外，最后处理 API；这是明确的接收顺序，不推断物理事件在外部发生的精确时间。不会逐个中间状态写 GPIO。例如按键切为开，而同轮 API 显式关，则最终只提交关，不产生短暂开脉冲。温度失效先于自动模式准入，因此同轮过期样本不能用于开启自动。
 
 每轮温度与网络各一步、按键一次、红外最多一帧、API 最多一个，没有按请求队列长度循环处理。ApiPort.takeRequest 必须非阻塞，接收缓冲有界且限制每次读取量；sendResponse 必须有界排队，不能等待慢客户端读取。队列满时的拒绝／断开策略及实际毫秒预算仍由板端 HTTP 适配器实现，不能仅凭“一次调用”宣称所有 I/O 都不阻塞。
 
-ApiPort 只交付 API 路由。静态页面由 HTTP 适配器使用已生成的 WebAssets 单独提供，也要受处理预算限制。[HttpApiPort 与 socket 驱动](http-connection.md) 已提供该装配：每轮在 step 前调用一次 poll，单客户端、读写每轮最多 256 字节，响应总期限 5000 ms；SocketHttpTransport 使用非阻塞 BSD socket，ESP32 的 close 交给固定任务。真实回环 TCP 验证通过，SDK 调度与设备耗时仍需实测。AppLoop 本身没有替代 Arduino 的 setup/loop 启动入口。
+ApiPort 只交付 API 路由。静态页面由 HTTP 适配器使用已生成的 WebAssets 单独提供，也要受处理预算限制。[NetworkHttpApi 与 socket 驱动](http-connection.md) 已提供该装配：将 NetworkHttpApi 作为 ApiPort 传入后，只调用 app.step；不额外更新 NetworkService 或手动 poll。每轮网络结果同时用于可信来源更新与 HTTP 启停，断网／换地址时先丢弃旧连接，再尝试取请求。监听尝试间隔至少 5000 ms；稳定监听时单客户端、读写每轮最多 256 字节，响应总期限 5000 ms。
+
+ApiPort.update 默认空实现，原有模拟 API 端口不受影响。SocketHttpTransport 使用非阻塞 BSD socket，ESP32 的 close 交给固定任务。真实回环 TCP 已验证自动断网关闭和同 IP 重连后的 HTTP 恢复；SDK 调度与设备耗时仍需实测。AppLoop 本身没有替代 Arduino 的 setup/loop 启动入口。
 
 ## 输出与日志
 

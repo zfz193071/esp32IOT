@@ -25,6 +25,14 @@ public:
     virtual void close() = 0;
 };
 
+// Listener lifecycle for a network-managed HTTP service. begin/end must not
+// wait for a peer or socket destruction; end is safe after a failed begin.
+class HttpListener : public HttpTransport {
+public:
+    virtual bool begin(const char* address, std::uint16_t port) = 0;
+    virtual void end() = 0;
+};
+
 // Single-threaded ApiPort: call poll(nowMs) once before each AppLoop::step.
 // sendResponse queues only; the next poll sends at most one bounded chunk.
 class HttpApiPort : public ApiPort {

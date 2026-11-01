@@ -1,20 +1,33 @@
 # HTTP 连接与有界发送
 
-`firmware/src/adapters/HttpApiPort.*` 将增量解析器、生成网页和 AppLoop 接在一起。它实现 `ApiPort`，通过 `HttpTransport` 使用一个已接受的客户端。`board/SocketHttpTransport.*` 已提供 BSD socket 驱动，真实回环 TCP 测试通过；`board/Esp32SocketCloser.*` 提供独立关闭任务并通过主机 FreeRTOS 桩验证。ESP32 工具链装配、Wi-Fi 实物联调和运行耗时仍待验证。
+`firmware/src/adapters/HttpApiPort.*` 将增量解析器、生成网页和 AppLoop 接在一起。`adapters/NetworkHttpApi.*` 管理网络变化与监听生命周期；`board/SocketHttpTransport.*` 提供 BSD socket 驱动，真实回环 TCP 测试通过；`board/Esp32SocketCloser.*` 提供独立关闭任务并通过主机 FreeRTOS 桩验证。ESP32 工具链装配、Wi-Fi 实物联调和运行耗时仍待验证。
 
 ## 主循环接入
 
-构建时先运行 `embed-web.mjs`，将生成目录加入 include 路径，并编译 `WebAssets.cpp`。传输端口必须比 HttpApiPort 活得更久，HttpApiPort 必须比 AppLoop 活得更久；只在同一个主循环线程调用。
+构建时先运行 `embed-web.mjs`，将生成目录加入 include 路径，并编译 `WebAssets.cpp`。传输端口必须比 NetworkHttpApi 活得更久，NetworkHttpApi 必须比 AppLoop 活得更久；只在同一个主循环线程调用。
 
 ```cpp
-HttpApiPort http(transport);
-// 创建 AppLoop 时，将 &http 作为 ApiPort 传入，然后调用 app.start()。
-// 每轮使用同一个单调时钟样本：
-http.poll(nowMs);
+NetworkHttpApi http(transport); // 默认 HTTP 端口 80
+// 创建 AppLoop 时，将 &networkService 和 &http 分别作为网络服务、ApiPort 传入。
+// setup 先 app.start() 建立关闭输出，再 closer.start() 初始化关闭任务。
+// 主循环只调用 AppLoop；不要另行调用 HTTP update/poll 或 NetworkService.update：
 app.step(nowMs, buttonPressed);
 ```
 
-`poll` 先推进连接；`takeRequest` 只移交完整的 `/api/` 请求且仅一次。AppLoop 按既定顺序处理采集、按键、红外和 API，先提交最终输出，再调用 `sendResponse`。响应复制到有界缓冲，下一轮 poll 才尝试发送；禁止异步保存请求后跨连接回调响应。若网络关闭，应先 `http.stop()` 丢弃当前请求／响应，再关闭底层监听器。重新开放监听由调用方负责。
+AppLoop 每轮只取得一次 NetworkService 结果，用它更新 Wi-Fi 状态与可信来源，然后处理按键／红外，再调用 `ApiPort.update(nowMs, networkUpdate)`。NetworkHttpApi 在该步骤清理旧连接、推进监听或调用一次内部 `HttpApiPort.poll`，然后才允许 `takeRequest` 移交完整的 `/api/` 请求。AppLoop 先提交最终输出，再调用 `sendResponse`。响应复制到有界缓冲，下一轮才尝试发送；禁止异步保存请求后跨连接回调响应。
+
+ApiPort.update 的默认实现为空，已有模拟 API 端口保持原有接入方式。独立 HttpApiPort 仍可用于手工管理监听的实验／测试，但必须自行在 AppLoop.step 前调用 poll，并在断网时先 stop 再停止监听；不要把该调用方式混入 NetworkHttpApi 装配。
+
+## 网络生命周期
+
+- 未获得地址、断网或地址为空时不监听，也不读取客户端。管理器只保存至多 15 字节的 IPv4 地址；数值格式由 SocketHttpTransport 在绑定前校验。没有 NetworkService 的 AppLoop 向管理器提供离线状态。
+- 首次获得地址立即尝试 begin。创建监听器的这一轮不再 accept／读写；下一轮才推进 HTTP。
+- 地址变化或断网时，先清空 HttpApiPort 的接收、待执行请求和待发送响应，再 end 监听器。下一次 takeRequest 不能交付旧连接的命令。已经执行的命令不撤销，当前输出和温控配置不会因网络变化而恢复默认值。
+- 两次 begin 尝试至少相隔 5000 ms，失败后调用 end 清理部分资源。预算跨断网、重连和地址变化保留，防止连接抖动绕过限频；按 uint32 时间差处理计时回绕。刚启动监听后很快换地址，可能需要等待剩余间隔。
+- 同一有效地址不反复 bind，离线期间不反复 end。旧 socket 尚未释放或关闭任务尚未就绪会使 begin 返回 false，等待下一次重试；主循环仍继续按键、红外和温度调度。
+- `listening()` 表示本地 begin 已成功，不表示对端可达、正在传输或实物设备可用。查看 SocketHttpTransport.lastError／Esp32SocketCloser.lastError 可获取底层诊断，不把它们写进业务状态 JSON。
+
+NetworkHttpApi 独占监听器生命周期；装配后不要从其他线程／主循环分支直接 begin、end 或 poll 同一个传输对象。析构时先清理 HTTP，再停止监听；关闭器仍遵循后文的销毁顺序。
 
 ## 预算与生命周期
 
@@ -60,18 +73,13 @@ HttpTransport 的 accept／receive／send／close 不能等待对端收发、执
 ```cpp
 Esp32SocketCloser closer;
 SocketHttpTransport transport(closer);
-HttpApiPort http(transport);
-// AppLoop 构造时传 &http；对象按相反顺序销毁。
+NetworkHttpApi http(transport);
+// AppLoop 构造时传 &networkService、&http；对象按相反顺序销毁。
 // setup: 先 app.start() 建立输出关闭，再 closer.start()。
-// closer.start() 成功且 Wi-Fi 获得地址后，才 transport.begin(ip, 80)。
+// 后续只调用 app.step，由 NetworkHttpApi 根据该轮网络结果启动／停止监听。
 ```
 
-板端主循环装配需要遵循以下生命周期，尚未提供未经工具链验证的完整烧录工程：
-
-1. 先观察可信 Wi-Fi 状态。断网或地址改变时，依次 `http.stop()`、`transport.end()`，清除旧连接和未执行命令，保留本地控制。
-2. 新地址就绪后尝试 begin；旧句柄未关闭、资源申请失败或端口错误会返回 false。调用方须限频重试，例如沿用网络调度的 5000 ms 间隔，不能每轮创建监听器或打印错误。
-3. 只有监听成功时调用 `http.poll(nowMs)`；无论 HTTP 是否就绪，每轮继续 `app.step(nowMs, buttonPressed)`。AppLoop 的网络调度会在执行 API 前更新可信地址。
-4. 地址比较和可信 Origin 必须来自网络端口。不要把请求 Host 当作监听地址或信任依据。
+上述生命周期已经由 NetworkHttpApi 实现；尚未提供未经目标工具链验证的完整烧录工程。地址比较和可信 Origin 均来自 NetworkService，不把请求 Host 当作监听地址或信任依据。设备默认端口 80 与 AppLoop 的动态 Origin 一致；测试可用端口 0，非默认端口装配需显式配置匹配端口的可信 Origin。
 
 ## ESP32 关闭任务
 
@@ -95,6 +103,8 @@ sh firmware/test/run-host-tests.sh --with-sockets
 
 仅监听随机的 `127.0.0.1` 端口，不读取 Wi-Fi 凭据、不访问设备、不接管已有进程，退出后删除自己的临时产物并释放 socket。需要操作系统允许本机监听；默认测试入口编译 socket 驱动并执行关闭任务桩测试，但明确跳过 TCP 测试。
 
-`SocketHttpTransportTest.cpp` 使用真实 BSD socket、生成资源、解析器和 AppLoop，验证全部静态正文、HEAD、分段请求、开关与状态读取、跨源拒绝、截断半关闭、空闲客户端期间按键推进、端口占用、非阻塞读取、驱动大小上限、关闭任务反压及监听重开。`Esp32SocketCloserTest.cpp` 使用主机线程和队列桩，验证关闭不在控制线程发生、停滞时队列有界、申请失败可重试、错误锁定和析构清理。
+`SocketHttpTransportTest.cpp` 使用真实 BSD socket、生成资源、解析器、NetworkHttpApi 和 AppLoop，验证全部静态正文、HEAD、分段请求、开关与状态读取、跨源拒绝、截断半关闭、空闲客户端期间按键推进、端口占用、非阻塞读取、驱动大小上限、关闭任务反压及模拟无线断网／同 IP 重连后的自动监听恢复。`Esp32SocketCloserTest.cpp` 使用主机线程和队列桩，验证关闭不在控制线程发生、停滞时队列有界、申请失败可重试、错误锁定和析构清理。
+
+`NetworkHttpApiTest.cpp` 在默认回归中用模拟监听器验证地址变化、失败清理、跨断网限频、时钟回绕、各请求阶段清理、待发响应丢弃，以及真实 NetworkService／AppLoop 下的可信地址更新、按键和采集推进。该测试检查每个已启动主循环只观察一次网络状态，避免板端额外 update 造成同轮状态不一致。
 
 本机网络验证不能替代 ESP32 的 lwIP、FreeRTOS、无线缓冲和驱动计时验证；没有执行设备编译、烧录或实物验收。

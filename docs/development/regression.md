@@ -45,6 +45,7 @@ sh firmware/test/run-host-tests.sh --with-sockets
 | 严格参数、来源拒绝、保存失败 | WriteApiTest.cpp | 已解析请求，不测 TCP/HTTP 字节解析 |
 | HTTP 分段／分帧、大小预算、超时和写接口串接 | HttpRequestParserTest.cpp | 原始内存字节，不测实际 TCP 和发送耗时 |
 | HTTP 单连接、静态资源、短写、超时及主循环接入 | HttpApiPortTest.cpp | 真实生成网页与 AppLoop，模拟传输端口；不测 TCP 或板端 I/O 耗时 |
+| HTTP 断网／换地址清理、重连、监听重试与同轮网络观察 | NetworkHttpApiTest.cpp | 真实 NetworkService／AppLoop、模拟监听器；不测真实无线连接 |
 | ESP32 独立关闭任务、队列上限、申请失败及错误锁定 | Esp32SocketCloserTest.cpp | 默认运行；主机线程／FreeRTOS 桩，不测目标 SDK 时序 |
 | 真实 TCP 监听、分段读写、资源与 API、连接释放和重开 | SocketHttpTransportTest.cpp | 可选；真实回环 socket、AppLoop 和生成网页，不是 Wi-Fi 实物测试 |
 | 非阻塞采集调度、超时与恢复 | TemperatureServiceTest.cpp | 模拟采集，不测真实驱动耗时 |
@@ -77,6 +78,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-11-01，新增 NetworkHttpApi 并接入 AppLoop 后，`sh firmware/test/run-host-tests.sh` 退出 0：21 个 C++ 测试程序、26 项 Node 测试全部通过。生命周期测试覆盖地址变化、各请求阶段清理、旧响应丢弃、首次立即监听、5 秒重试与跨断网限频、时钟回绕、构造／销毁、每轮一次网络观察，以及等待恢复期间的按键和温度采集。`sh firmware/test/run-socket-tests.sh` 在已授权回环监听环境退出 0，真实 C++ TCP 路径已切换为 NetworkHttpApi，由模拟无线断开／同 IP 重连自动停止和恢复监听，网页／API 仍通过。未运行未修改的 Node 模拟 HTTP；未进行 ESP32 编译、烧录或实物验证。
 
 2026-11-01，新增 SocketHttpTransport 和 Esp32SocketCloser 后执行 `sh firmware/test/run-host-tests.sh`，退出 0：20 个 C++ 测试程序、26 项 Node 测试全部通过，并编译 BSD 驱动。另运行 `sh firmware/test/run-socket-tests.sh`：首次因沙箱禁止监听而报 EPERM，授权回环监听后退出 0。新增真实 TCP 测试验证全部资源字节、HEAD、写入与状态读取、跨源拒绝、截断半关闭、空闲客户端期间按键推进、端口冲突、256 字节驱动预算、延迟关闭和监听重开；关闭任务测试验证固定资源、停滞／错误与清理。本轮未改 Node 模拟器，未运行其可选 HTTP 测试；没有目标工具链编译或实物验证。
 
