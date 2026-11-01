@@ -30,7 +30,11 @@ node firmware/tools/inspect-board.mjs --port /dev/cu.REPLACE_WITH_ACTUAL_PORT
 
 脚本固定执行 `--chip auto --baud 115200 --before no-reset --after no-reset --no-stub --connect-attempts 3 flash-id`，仅允许显式指定的串口，不接受其他 esptool 子命令。它不写入／擦除 Flash，不上传 RAM stub，不自动选择分区或 GPIO；不运行硬复位序列，成功后留在下载模式。操作涉及串口和 ROM 通信，不是对设备完全无影响的文件读取。下一步操作前保持负载断开；不要直接把编译检查产物烧入板卡。
 
-识别进程限时 45 秒，使用独立配置和清理过的 `ESPTOOL_*` 环境。原始 stdout／stderr、退出码、时间、端口和参数保存在被忽略的 `firmware/build/board-inspection/read-*/result.json`。失败返回非零，不从缺失字段猜型号或容量；成功也只保存原始结果，不自动修改工程板型。记录芯片型号、修订号、Flash manufacturer/device ID 和 detected size；完整模组订货型号可能仍无法由工具识别。
+识别进程使用独立配置和清理过的 `ESPTOOL_*` 环境。运行超过 45 秒，或收到 Ctrl-C／SIGTERM 时，脚本向本次启动的独立进程组发送 SIGTERM；1 秒后仍未结束则发送 SIGKILL，覆盖工具启动器的子进程。不会终止其他串口会话。
+
+stdout／stderr 各保留前 64 KiB，结束后显示并与退出码、耗时、端口和参数一起保存到被忽略的 `firmware/build/board-inspection/read-*/result.json`。报告包含 `schemaVersion` 和 `ok`，区分端口预检查失败、工具启动失败、超时、取消、强制终止和输出截断；端口不存在或工具无法启动时也尝试保存报告。目录／磁盘写入失败会直接报错，无法保证留档。
+
+非零退出、超时、取消或输出截断均判为失败并返回非零，即使子进程最终返回 0 也不接受不完整结果。不从缺失字段猜型号或容量；成功也只保存原始结果，不自动修改工程板型。记录芯片型号、修订号、Flash manufacturer/device ID 和 detected size；完整模组订货型号可能仍无法由工具识别。进程清理和失败留档已有主机模拟测试，真实 ROM 读取尚未执行。
 
 官方依据：[flash-id 输出](https://docs.espressif.com/projects/esptool/en/latest/esp32/esptool/basic-commands.html#read-spi-flash-id-flash-id)、[无复位与无 stub 参数](https://docs.espressif.com/projects/esptool/en/latest/esp32/esptool/advanced-options.html)、[配置优先级](https://docs.espressif.com/projects/esptool/en/latest/esp32/esptool/configuration-file.html)。参数同时与本机安装的 esptool 5.1.0 帮助核对。
 

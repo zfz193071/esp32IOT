@@ -1,7 +1,7 @@
 import { readdir, stat, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { spawn } from 'node:child_process';
 import { firmware, toolchain } from './arduino-environment.mjs';
+import { captureInspectionProcess, inspectionSucceeded } from './inspection-process.mjs';
 
 const usage = 'Usage: node firmware/tools/inspect-board.mjs --list | --port /dev/DEVICE [--dry-run]';
 // Version required by the pinned Arduino-ESP32 3.3.3 platform.
@@ -29,8 +29,6 @@ async function main() {
       prerequisite: 'Motor/load disconnected; manually enter ROM download mode first.' }, null, 2));
     return;
   }
-  if (!(await stat(args[1])).isCharacterDevice()) throw new Error('Port must be a serial character device');
-  if (!(await stat(executable)).isFile()) throw new Error('Run setup-arduino.mjs first');
   const parent = join(firmware, 'build/board-inspection');
   await mkdir(parent, { recursive: true });
   const output = await mkdtemp(join(parent, 'read-'));
@@ -38,21 +36,35 @@ async function main() {
   await writeFile(config, '[esptool]\nopen_port_attempts = 1\n');
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('ESPTOOL_')));
   env.ESPTOOL_CFGFILE = config;
-  console.log('Reading ROM chip/Flash identity; no Flash write/erase. Device must already be in download mode.');
-  const result = await new Promise((resolve, reject) => {
-    const child = spawn(executable, command, { env, cwd: output, timeout: 45000, stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '', stderr = '';
-    child.stdout.on('data', (chunk) => { stdout += chunk; process.stdout.write(chunk); });
-    child.stderr.on('data', (chunk) => { stderr += chunk; process.stderr.write(chunk); });
-    child.on('error', reject);
-    child.on('close', (code, signal) => resolve({ code, signal, stdout, stderr }));
-  });
+  let result;
+  try {
+    if (!(await stat(args[1])).isCharacterDevice()) throw new Error('Port must be a serial character device');
+    console.log('Reading ROM chip/Flash identity; no Flash write/erase. Device must already be in download mode.');
+    const abort = new AbortController();
+    const interrupt = () => abort.abort('SIGINT');
+    const terminate = () => abort.abort('SIGTERM');
+    process.on('SIGINT', interrupt);
+    process.on('SIGTERM', terminate);
+    try {
+      result = await captureInspectionProcess(executable, command, { env, cwd: output, abortSignal: abort.signal });
+    } finally {
+      process.removeListener('SIGINT', interrupt);
+      process.removeListener('SIGTERM', terminate);
+    }
+  } catch (error) {
+    result = { code: null, signal: null, stdout: '', stderr: '',
+      preflightError: { code: error.code ?? null, message: error.message } };
+  }
+  const ok = inspectionSucceeded(result);
   await writeFile(join(output, 'result.json'), JSON.stringify({
+    schemaVersion: 1, ok,
     port: args[1], executable, expectedToolVersion: version, args: command,
     capturedAt: new Date().toISOString(), ...result,
   }, null, 2) + '\n');
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
   console.log(`Raw identification output: ${output}/result.json`);
-  if (result.code !== 0) throw new Error('Identification failed; no board/Flash configuration accepted');
+  if (!ok) throw new Error('Identification failed or output incomplete; inspect result.json. No board/Flash configuration accepted.');
   console.log('Read completed. Review chip and detected Flash size; no board profile was changed.');
 }
 main().catch((error) => { console.error(error.message); process.exitCode = 1; });
