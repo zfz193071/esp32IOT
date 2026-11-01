@@ -51,6 +51,7 @@ async function main() {
       'app/AppLoop.h', 'adapters/TextDiagnostics.h', 'adapters/NetworkHttpApi.h',
       'board/ArduinoNetworkPort.h', 'board/NvsConfigPersistence.h', 'board/Esp32SocketCloser.h',
       'board/Esp32SerialSink.h',
+      'board/Esp32BootId.h',
     ].map((header) => `#include "${header}"\n`).join(''));
   }
   await copyFile(join(firmware, 'arduino', sketchName, `${sketchName}.ino`), join(sketch, `${sketchName}.ino`));

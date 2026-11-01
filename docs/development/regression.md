@@ -37,6 +37,7 @@ sh firmware/test/run-host-tests.sh --with-sockets
 | 规则 | 测试文件（firmware/test） | 验证边界 |
 |---|---|---|
 | 默认关闭、命令来源、显式开关和幂等 | FanControllerTest.cpp | 控制状态，不测 GPIO 电平 |
+| 启动随机源顺序、标识编码／缓存与状态 API 契约 | Esp32BootIdTest.cpp | 三次独立进程注入样本；不验证实际熵质量或断电重启 |
 | 按下消抖、启动按住、长按与计时回绕 | ButtonDebouncerTest.cpp | 归一化按键输入 |
 | 阈值范围、间隔、损坏回退和保存失败 | ConfigStoreTest.cpp | 模拟原子存储，不测断电 Flash |
 | NVS 句柄、固定长度读取及写入／提交未知结果 | NvsConfigPersistenceTest.cpp | 主机桩模拟旧／新值两种恢复，不测真实 Flash |
@@ -79,6 +80,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-11-01，新增 Esp32BootId 并替换 CompileCheck 的固定启动标识后，`sh firmware/test/run-host-tests.sh` 退出 0：23 个 C++ 测试程序（标识测试在三个独立进程运行）及 26 项 Node 测试通过。首次新增测试漏列真实 StateApi 所需的 ConfigStore 链接依赖，补齐后整套通过。验证启动前无随机调用、启用／采样／关闭顺序、128 位输入逐字节编码、前导零／全零、同次启动 1000 次缓存读取不碰硬件，以及真实状态 API 的 200 响应和原样输出。真实 Arduino-ESP32 参考构建退出 0，程序 1,200,523 字节、静态全局数据 50,140 字节。未重跑未修改的可选模拟 HTTP／TCP；未烧录或验证真实熵质量、实际重启和手机恢复。
 
 2026-11-01，新增 Esp32SerialSink 后，`sh firmware/test/run-host-tests.sh` 退出 0：22 个 C++ 测试程序和 26 项 Node 测试通过。随后将格式拒绝检查移到空队列并补齐真实启动日志的容量检查，单独严格告警重编译运行 Esp32SerialSinkTest 通过。新增覆盖两次队列申请／任务申请失败与恢复、重复启动、4 条排队加 1 条发送中、停滞期间 10,000 次拒绝与丢弃计数、512 字节边界、所有权复制、FIFO／换行、短写停止后续发送、资源回收和真实 TextDiagnostics 串接。`node firmware/tools/build-arduino.mjs` 退出 0，22 个生产 C++ 文件已装配，真实参考目标生成 `build-zpsz3s/output/CompileCheck.ino.bin`，程序 1,199,191 字节、静态全局数据 50,092 字节；ELF 确认串口任务及提交方法已链接。本轮未改 HTTP／网页，未重跑可选模拟 HTTP／TCP；未烧录或进行实际串口时序验证。
 

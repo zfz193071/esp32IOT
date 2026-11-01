@@ -16,6 +16,18 @@ build_dir=$(mktemp -d "${TMPDIR:-/tmp}/esp32fan-test.XXXXXX")
 trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
 
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" -I "$firmware_dir/test/arduino-stub" \
+    "$firmware_dir/src/board/Esp32BootId.cpp" \
+    "$firmware_dir/src/adapters/StateApi.cpp" \
+    "$firmware_dir/src/config/ConfigStore.cpp" \
+    "$firmware_dir/test/Esp32BootIdTest.cpp" \
+    -o "$build_dir/esp32-boot-id-test"
+# Separate processes model fresh boot lifetime; no test-only cache reset API.
+"$build_dir/esp32-boot-id-test" first
+"$build_dir/esp32-boot-id-test" second
+"$build_dir/esp32-boot-id-test" zero
+
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/src" \
     "$firmware_dir/src/board/BoardProfile.cpp" \
     "$firmware_dir/test/BoardProfileTest.cpp" \

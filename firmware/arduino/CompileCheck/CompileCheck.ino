@@ -21,20 +21,24 @@ esp32fan::NetworkService network(radio);
 esp32fan::Esp32SocketCloser closer;
 esp32fan::SocketHttpTransport transport(closer);
 esp32fan::NetworkHttpApi http(transport);
-esp32fan::AppLoop app("compile-check-only", config, output, diagnostics, 20,
-                     nullptr, &network, &http);
+esp32fan::AppLoop* app = nullptr;
 }
 
 void setup() {
+  // Entropy setup must precede any ADC/I2S/RF user, not run in global constructors.
+  const auto& bootId = esp32fan::esp32BootId();
   Serial.begin(115200);
   Serial.println("ESP32_FAN_COMPILE_CHECK: no GPIO, placeholder Wi-Fi, not production firmware");
   // Exclusive UART ownership transfers to sink after the setup banner.
   sink.start();
-  app.start();
+  static esp32fan::AppLoop instance(bootId, config, output, diagnostics, 20,
+                                   nullptr, &network, &http);
+  app = &instance;
+  app->start();
   if (!closer.start()) sink.tryWriteLine("Compile-check socket worker unavailable");
 }
 
 void loop() {
-  app.step(millis(), false);
+  if (app) app->step(millis(), false);
   delay(1);
 }
