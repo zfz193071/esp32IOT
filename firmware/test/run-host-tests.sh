@@ -54,6 +54,14 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
     -o "$build_dir/esp32-socket-closer-test"
 "$build_dir/esp32-socket-closer-test"
 
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror -pthread \
+    -I "$firmware_dir/src" -I "$firmware_dir/test/rtos-stub" -I "$firmware_dir/test/arduino-stub" \
+    "$firmware_dir/src/board/Esp32SerialSink.cpp" \
+    "$firmware_dir/src/adapters/TextDiagnostics.cpp" \
+    "$firmware_dir/test/Esp32SerialSinkTest.cpp" \
+    -o "$build_dir/esp32-serial-sink-test"
+"$build_dir/esp32-serial-sink-test"
+
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/src" \
     "$firmware_dir/src/domain/FanController.cpp" \

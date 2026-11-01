@@ -11,13 +11,8 @@ class UnwiredOutput final : public esp32fan::OutputPort {
   void setFan(bool) override {}
   void setIndicator(bool) override {}
 };
-class SilentSink final : public esp32fan::DiagnosticSink {
- public:
-  bool tryWriteLine(const std::string&) override { return true; }
-};
-
 UnwiredOutput output;
-SilentSink sink;
+esp32fan::Esp32SerialSink sink(Serial);
 esp32fan::TextDiagnostics diagnostics(sink);
 esp32fan::NvsConfigPersistence persistence;
 esp32fan::ConfigStore config(persistence);
@@ -33,8 +28,10 @@ esp32fan::AppLoop app("compile-check-only", config, output, diagnostics, 20,
 void setup() {
   Serial.begin(115200);
   Serial.println("ESP32_FAN_COMPILE_CHECK: no GPIO, placeholder Wi-Fi, not production firmware");
+  // Exclusive UART ownership transfers to sink after the setup banner.
+  sink.start();
   app.start();
-  if (!closer.start()) Serial.println("Compile-check socket worker unavailable");
+  if (!closer.start()) sink.tryWriteLine("Compile-check socket worker unavailable");
 }
 
 void loop() {

@@ -55,6 +55,7 @@ sh firmware/test/run-host-tests.sh --with-sockets
 | M4 手机／按键／红外、断网重连和新启动联合场景 | AppLoopTest.cpp | 模拟端口联合演练，不代替手机与实物验收 |
 | 连续 API 请求下的按键、红外和采集推进 | AppLoopPressureTest.cpp | 20,000 轮模拟时间，不测真实吞吐或连续运行 |
 | 诊断格式、配置回退原因、故障、IP 与输出端繁忙 | TextDiagnosticsTest.cpp | 模拟日志接收端，不测真实串口缓冲或发送耗时 |
+| UART 日志队列、发送停滞、容量与短写、停机清理 | Esp32SerialSinkTest.cpp | 主机线程／FreeRTOS／UART 桩，不测真实波特率、SDK 调度或电脑接收 |
 | C++ 状态 JSON 与网页校验契约 | StateApiTest.mjs | 跨语言字段和响应格式 |
 | 页面编入 C++ 后的字节一致性 | WebAssetsTest.mjs | 资源生成、编译和路由 |
 | 网页串行写、旧响应、重启与未知结果 | WebClientTest.mjs | 模拟 fetch，不测浏览器布局 |
@@ -78,6 +79,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-11-01，新增 Esp32SerialSink 后，`sh firmware/test/run-host-tests.sh` 退出 0：22 个 C++ 测试程序和 26 项 Node 测试通过。随后将格式拒绝检查移到空队列并补齐真实启动日志的容量检查，单独严格告警重编译运行 Esp32SerialSinkTest 通过。新增覆盖两次队列申请／任务申请失败与恢复、重复启动、4 条排队加 1 条发送中、停滞期间 10,000 次拒绝与丢弃计数、512 字节边界、所有权复制、FIFO／换行、短写停止后续发送、资源回收和真实 TextDiagnostics 串接。`node firmware/tools/build-arduino.mjs` 退出 0，22 个生产 C++ 文件已装配，真实参考目标生成 `build-zpsz3s/output/CompileCheck.ino.bin`，程序 1,199,191 字节、静态全局数据 50,092 字节；ELF 确认串口任务及提交方法已链接。本轮未改 HTTP／网页，未重跑可选模拟 HTTP／TCP；未烧录或进行实际串口时序验证。
 
 2026-11-01，核对 6 张主板近照后新增 ROM 识别工具、增强 SerialBringup 并扩展构建入口。串口枚举和不打开设备的 dry-run 成功；烟测验证无参数、写／擦子命令、额外复位参数、非串口路径和未知 sketch 均拒绝。本机 esptool 5.1.0 的命令帮助接受固定只读参数。SerialBringup 和默认 CompileCheck 两个入口均在真实 Arduino-ESP32 3.3.3 参考目标编译／链接通过，分别占用 279,031 / 1,198,123 字节程序空间，静态全局数据 20,792 / 50,068 字节。默认集成产物目录 `firmware/build/arduino-check/build-JDTMK6/`；串口产物见[识别说明](serial-bringup.md)。本轮未修改业务控制代码，未重跑主机业务／TCP／模拟 HTTP 套件；未执行实际 ROM 读取、烧录或设备运行验证。
 

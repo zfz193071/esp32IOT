@@ -41,7 +41,20 @@ ApiPort.update 默认空实现，原有模拟 API 端口不受影响。SocketHtt
 
 DiagnosticPort 接收启动加载结果、温度错误、网络事件，以及模式／输出／故障／命令来源／阈值变化。相同状态、仅采样年龄或温度数值变化不会逐循环打印状态日志。
 
-`adapters/TextDiagnostics.h/.cpp` 实现可复用的文本诊断格式。构造 `TextDiagnostics(sink)` 后作为 AppLoop 的 DiagnosticPort 传入；板端只需实现 `DiagnosticSink::tryWriteLine`。每次调用传入一整行（不带换行符），输出端必须立即接受或返回 false，不可等待串口读者；适配器不重试、不积压日志，失败累计到 `droppedLines()`（达到 uint32 最大值后饱和）。实际串口的有界缓冲与发送预算仍待板端实现。
+`adapters/TextDiagnostics.h/.cpp` 实现可复用的文本诊断格式。构造 `TextDiagnostics(sink)` 后作为 AppLoop 的 DiagnosticPort 传入；每次传入一整行（不带换行符）。格式层不重试，输出端拒绝时累计到 `droppedLines()`（达到 uint32 最大值后饱和）。板端输出由 `board/Esp32SerialSink.h/.cpp` 提供，真实串口时序仍待实物验证。
+
+### ESP32 UART 诊断发送
+
+`Esp32SerialSink` 接收已初始化的 `HardwareSerial&`，对应当前 USB-C／CH340C 核心板的 UART 路径。在 `Serial.begin(115200)` 后、`AppLoop.start()` 前调用 `sink.start()`；初始化失败时所有日志提交返回 false，本地控制可以继续。成功后将该 UART 的写入所有权交给 sink，其他任务不能混用 `Serial.print`、调试输出或在运行中调用 `Serial.end()`；底层 SDK 如另有日志输出，也需在正式固件装配中核对其 UART 路由。
+
+- 一个控制循环生产者；最多排队 4 条，加工作任务正在发送的 1 条。每条正文最多 512 字节，另加一个换行；空行允许，CR／LF／NUL 和超长正文被拒绝，防止破坏整行格式。
+- 提交只复制固定大小记录并用 `xQueueSend(..., 0)` 入队，不访问 UART、不分配动态队列、不等待发送完成。队列满或尚未启动时立即返回 false；持续拥塞不会增长缓存。
+- 一个优先级 1、栈 3072 字节的 FreeRTOS 工作任务按 FIFO 调用 UART 写入。Arduino-ESP32 3.3.3 的 UART 写路径存在互斥锁和 `uart_write_bytes`，因此不在控制线程通过 `availableForWrite()` 加 `write()` 来假定无等待。
+- 如果串口接口报告短写，`writeFailed()` 锁定为 true，后续提交拒绝，已排队但未发送的记录丢弃，不重试或接着拼接残缺行。Arduino 3.3.3 的 `HardwareSerial::write` 本身返回请求长度，**不能据这个返回值证明数据已到达电脑**；短写检测仅处理接口明确报告的失败。
+- `tryWriteLine=true` 表示已接收入队，不是电脑确认。格式层的丢弃计数只统计被拒绝的提交，不覆盖入队后传输失败。此诊断通道不作为持久化审计日志。
+- 析构会等待已接受记录处理、工作任务确认退出，再释放两条队列；可能等待 UART，只能在控制循环外停机时执行。UART 对象必须比 sink 活得更久；没有强制终止正在写 UART 的任务。
+
+当前 CompileCheck 已将原先的静默输出替换为此发送端。它仍为无电机 GPIO、占位 Wi-Fi 的编译检查程序，不据此声称整机固件完成。主机线程／FreeRTOS／UART 桩测试覆盖资源申请失败、重试启动、拥塞、FIFO、边界长度、正文复制、格式拒绝、短写锁定与清理；实际波特率、任务栈余量、SDK 日志干扰和断开终端后的行为待设备验证。
 
 日志示例：
 
@@ -63,4 +76,4 @@ temperature event=timeout
 
 `sh firmware/test/run-host-tests.sh` 包含 AppLoopTest.cpp：模拟输出端检查关闭先于存储加载；模拟 API 确认响应发生在最终输出提交之后；真实 C++ 控制器处理同轮按键与网页、温度故障后的自动拒绝、手动接管、IP 更新后的旧地址拒绝，以及持续请求下的按键／采集推进。另验证没有网络和传感器时的纯本地装配，以及红外切换、重复帧不覆盖按键来源、同轮网页最终命令不产生中间输出。
 
-实际 GPIO、LED 电平、驱动供电、串口诊断、有限网络缓冲及真实独立运行仍未完成，因此 ESP-008 保持进行中。下一步需依据硬件资料完成 BoardProfile 与 ESP-007 输出适配，然后把这些端口接到实际工具链。
+GPIO、LED 电平、驱动供电、串口发送时序与真实独立运行尚未完成实物验证，因此 ESP-008 保持进行中。有界串口和网络适配已接入参考目标编译；下一步仍需实际 BoardProfile、ESP-007 供电／输出确认及设备验证。

@@ -35,7 +35,7 @@ node firmware/tools/build-arduino.mjs --sketch SerialBringup
 
 ## 编译入口的运行边界
 
-CompileCheck 连接真实 AppLoop、NVS 配置层、ArduinoNetworkPort、NetworkHttpApi、BSD socket 和 FreeRTOS 关闭任务；所有生产源文件都被编译。输出端口为无 GPIO 实现，没有传感器或红外实物驱动。Wi-Fi 使用固定占位符，网络适配器会拒绝连接，不能通过替换此文件的密码就当作完整控制固件。
+CompileCheck 连接真实 AppLoop、NVS 配置层、ArduinoNetworkPort、NetworkHttpApi、BSD socket、FreeRTOS 关闭任务和 Esp32SerialSink 日志发送任务；所有生产源文件都被编译。输出端口为无 GPIO 实现，没有传感器或红外实物驱动。Wi-Fi 使用固定占位符，网络适配器会拒绝连接，不能通过替换此文件的密码就当作完整控制固件。
 
 入口具有固定的 `compile-check-only` 标识，并在串口说明其用途。如果手动运行它，NVS 会在启动时被读取，入口不会自动保存配置；Arduino 核心初始化 NVS 的行为仍见 [配置持久化说明](config-store.md)。本入口不提供上传命令；真实设备验证先确认板型／Flash，并使用 [串口最小程序](serial-bringup.md)，随后按已核实 BoardProfile 装配业务固件。
 
@@ -47,6 +47,8 @@ CompileCheck 连接真实 AppLoop、NVS 配置层、ArduinoNetworkPort、Network
 - [Espressif GitHub 归档镜像](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/tools/idf-tools.html#github-assets-mirror)：官方镜像地址与 URL 改写规则。
 
 ## 验证记录
+
+2026-11-01 UART 适配更新：CompileCheck 接入 Esp32SerialSink 后重新编译／链接通过，装配 22 个生产 C++ 文件，程序 1,199,191 字节、静态全局数据 50,092 字节。输出目录 `firmware/build/arduino-check/build-zpsz3s/`，二进制 SHA-256 为 `0eb0781679717f0c44b436315553b05853fb1c15285a32b164ee5f81c83251c8`；ELF 确认日志工作任务、启动和提交函数已链接。任务栈和队列在运行时申请，不包含在静态全局数据统计里；实际栈余量、UART 行为仍未实测。
 
 2026-11-01，在 macOS x86_64 上执行两个入口，均退出 0。首次安装遇到 GitHub 超时，核心依赖通过缓存及官方镜像补齐；所有下载均校验 SHA-256。其他主机平台尚未验证。
 
