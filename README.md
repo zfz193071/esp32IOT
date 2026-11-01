@@ -28,6 +28,7 @@ The linked design, development, and issue documents are currently in Chinese.
 - [Start-from-zero and troubleshooting guide](docs/development/from-zero.md): commands available now, hardware integration order, and fault diagnosis.
 - [C++ state responses and incremental HTTP parsing](docs/development/state-api.md): state JSON, fragmented input, request size budgets, deadlines, and response headers.
 - [HTTP connections and bounded responses](docs/development/http-connection.md): network-driven listener lifecycle, BSD sockets, embedded assets and an ESP32 close worker; reconnect tested over loopback TCP, device validation pending.
+- [Arduino-ESP32 reference build](docs/development/arduino-reference-build.md): isolated pinned toolchain, generated web assets and compile-only integration; physical board and upload settings remain unconfirmed.
 - [C++ write requests and controller integration](docs/development/write-api.md): strict JSON, same-origin validation, and configuration saving.
 - [Non-blocking temperature sampling](docs/development/temperature-service.md): driver contract, conversion timeout, sample health, and main-loop order.
 - [Wi-Fi connection and rate-limited retries](docs/development/network-service.md): connection timeout, IP events, private settings, and behavior when offline.

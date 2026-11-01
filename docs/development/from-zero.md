@@ -28,6 +28,8 @@ node firmware/tools/embed-web.mjs
 
 第二条命令应报告嵌入 5 条网页路由，在被 Git 忽略的 `firmware/build/generated/` 生成 `WebAssets.h`、`WebAssets.cpp` 和 `web-manifest.json`。每次修改网页后重跑；它只生成 C++ 资源，尚未产生可烧录固件。生成文件内容与验证方式见 [网页资源说明](web-assets.md)。
 
+在实物板型尚未确认时，可使用 [Arduino-ESP32 参考目标编译](arduino-reference-build.md)检查真实 SDK 兼容性。该入口在项目忽略目录安装固定工具链、重新生成网页并编译所有生产模块；编译目标不代表实际选板，脚本不执行烧录。
+
 ## 3. 本机预览手机控制页
 
 在独立终端执行：

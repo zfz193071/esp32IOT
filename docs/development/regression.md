@@ -79,6 +79,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 
 ## 本轮结果
 
+2026-11-01，新增隔离 Arduino 工具链及编译入口后，`sh firmware/test/run-host-tests.sh` 退出 0：21 个 C++ 测试程序和 26 项 Node 测试通过。`node firmware/tools/setup-arduino.mjs` 与 `node firmware/tools/build-arduino.mjs` 均退出 0，使用 Arduino CLI 1.5.1、Arduino-ESP32 3.3.3 在 macOS x86_64 完成通用 `esp32:esp32:esp32` 目标的真实编译／链接，全部 21 个生产 C++ 文件生成目标文件。产物、占用与摘要见[参考目标编译记录](arduino-reference-build.md)。未修改生产控制逻辑，本轮未重跑可选模拟 HTTP／回环 TCP；参考目标不代表实际选板，未烧录或进行设备验证。
+
 2026-11-01，新增 NetworkHttpApi 并接入 AppLoop 后，`sh firmware/test/run-host-tests.sh` 退出 0：21 个 C++ 测试程序、26 项 Node 测试全部通过。生命周期测试覆盖地址变化、各请求阶段清理、旧响应丢弃、首次立即监听、5 秒重试与跨断网限频、时钟回绕、构造／销毁、每轮一次网络观察，以及等待恢复期间的按键和温度采集。`sh firmware/test/run-socket-tests.sh` 在已授权回环监听环境退出 0，真实 C++ TCP 路径已切换为 NetworkHttpApi，由模拟无线断开／同 IP 重连自动停止和恢复监听，网页／API 仍通过。未运行未修改的 Node 模拟 HTTP；未进行 ESP32 编译、烧录或实物验证。
 
 2026-11-01，新增 SocketHttpTransport 和 Esp32SocketCloser 后执行 `sh firmware/test/run-host-tests.sh`，退出 0：20 个 C++ 测试程序、26 项 Node 测试全部通过，并编译 BSD 驱动。另运行 `sh firmware/test/run-socket-tests.sh`：首次因沙箱禁止监听而报 EPERM，授权回环监听后退出 0。新增真实 TCP 测试验证全部资源字节、HEAD、写入与状态读取、跨源拒绝、截断半关闭、空闲客户端期间按键推进、端口冲突、256 字节驱动预算、延迟关闭和监听重开；关闭任务测试验证固定资源、停滞／错误与清理。本轮未改 Node 模拟器，未运行其可选 HTTP 测试；没有目标工具链编译或实物验证。

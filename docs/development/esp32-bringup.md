@@ -2,7 +2,7 @@
 
 本项目采用 Arduino-ESP32 与 C++。最终由电脑将代码编译成适配实际芯片的固件，通过 USB 烧录到 ESP32；运行时按键、传感器、Wi-Fi 和网页服务都在设备侧工作。手机只需访问设备地址，电脑不需要一直运行当前 Node.js 模拟服务器。
 
-目前主机测试通过的控制器、消抖、配置、自动温控和页面是可复用部分；已有 BoardProfile 候选校验、Arduino GPIO 端口与独立[串口最小程序](serial-bringup.md)，但仓库尚无完整业务固件的板端启动装配、Wi-Fi／HTTP 服务、真实采集与非易失存储适配，不能直接把现有业务目录作为完整固件烧录。
+目前已有控制器、消抖、配置、自动温控、BoardProfile 候选校验、Arduino GPIO／Wi-Fi、NVS 与 HTTP 适配；独立[串口最小程序](serial-bringup.md)和[参考目标编译入口](arduino-reference-build.md)用于分阶段验证。真实温度／红外驱动、已确认实物 GPIO 和完整业务启动入口仍待完成，不能把编译检查入口作为整机固件烧录。
 
 ## 联调前准备
 

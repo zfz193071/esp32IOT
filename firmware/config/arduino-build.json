@@ -1,0 +1,27 @@
+{
+  "purpose": "Compile-only reference target; not a confirmed physical board or upload profile",
+  "cliVersion": "1.5.1",
+  "platform": "esp32:esp32",
+  "coreVersion": "3.3.3",
+  "coreArchiveSha256": "6402c2ec7b1f764305fa2904a9b7671fee830f9e63e22c510cad01f7e4c70967",
+  "fqbn": "esp32:esp32:esp32",
+  "indexUrl": "https://espressif.github.io/arduino-esp32/package_esp32_index.json",
+  "cliArchives": {
+    "darwin-x64": {
+      "name": "arduino-cli_1.5.1_macOS_64bit.tar.gz",
+      "sha256": "c982e940027996bea9901050e95fae99c59c1dcfee54beedecaf28141e7bf2e7"
+    },
+    "darwin-arm64": {
+      "name": "arduino-cli_1.5.1_macOS_ARM64.tar.gz",
+      "sha256": "cb952e8c1621c95ef5f1d17831c945e3d0ec5973f89c557a7ec8feb9c4f7d4c9"
+    },
+    "linux-x64": {
+      "name": "arduino-cli_1.5.1_Linux_64bit.tar.gz",
+      "sha256": "28a8e119c498a25607821c36cb2dc49e8463941b261a0d99091baa7bc692dd2b"
+    },
+    "linux-arm64": {
+      "name": "arduino-cli_1.5.1_Linux_ARM64.tar.gz",
+      "sha256": "1e69e077479f300614d4551334e0a33f08ee40b04315d83b8e7e0e94f0d0ee62"
+    }
+  }
+}

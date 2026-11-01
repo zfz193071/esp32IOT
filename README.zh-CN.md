@@ -28,6 +28,7 @@
 - [从零运行与排障指南](docs/development/from-zero.md)：当前可执行命令、实物接入顺序与故障定位。
 - [C++ 状态响应与 HTTP 增量解析](docs/development/state-api.md)：状态 JSON、分段接收、请求大小预算、超时及响应头要求。
 - [HTTP 连接与有界发送](docs/development/http-connection.md)：网络变化驱动监听启停、BSD socket、网页分段发送与 ESP32 关闭任务；重连回环 TCP 已验证，待设备联调。
+- [Arduino-ESP32 参考目标编译](docs/development/arduino-reference-build.md)：隔离工具链、固定版本、网页生成与编译检查入口；实际板型和烧录参数待确认。
 - [C++ 写请求与控制器接入](docs/development/write-api.md)：严格 JSON、同源校验与配置保存。
 - [非阻塞温度采集调度](docs/development/temperature-service.md)：驱动契约、转换超时、采样健康与主循环顺序。
 - [Wi-Fi 连接与限频重试](docs/development/network-service.md)：连接超时、IP 事件、私有配置与断网行为。
