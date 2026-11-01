@@ -36,6 +36,6 @@ Wi-Fi 参数由板端适配器读取并交给无线库，不进入 NetworkServic
 
 运行 `sh firmware/test/run-host-tests.sh`。NetworkServiceTest.cpp 使用模拟驱动和真实控制器，验证等待期间本地按键、连接状态推进、稳定状态不刷版本、IP 变化、断网保持模式／输出、错误凭据式失败的限频重试、精确超时和重试边界、计时回绕、缺失 IP、非法配置及无补发风暴。ArduinoNetworkPortTest.cpp 用 Wi-Fi API 主机桩验证初次连接时的暂时断线状态、取得 IP 后连接、已连接后掉线、驱动失败以及禁用自动重连。
 
-实物准备好后，用 Arduino-ESP32 编译并烧录 `WiFiBringup.ino`，在 115200 波特率串口查看连接、超时、重试及设备 IP。该独立程序不配置任何电机 GPIO，也不会打印 SSID 或密码；请分别用正确／错误凭据与路由器断电恢复验证。板端 Wi-Fi 状态适配后续仍需装入完整控制固件。
+当前可先运行 `node firmware/tools/build-arduino.mjs --sketch WiFiBringup`，以示例凭据在隔离工具链完成通用目标纯编译；这不会读取真实 `wifi.local.h`、打开串口或上传。实物准备好后，用 Arduino-ESP32 编译并烧录 `WiFiBringup.ino`，在 115200 波特率串口查看连接、超时、重试及设备 IP。该独立程序不配置任何电机 GPIO，也不会打印 SSID 或密码；请分别用正确／错误凭据与路由器断电恢复验证。板端 Wi-Fi 状态适配后续仍需装入完整控制固件。
 
 正确／错误真实凭据、路由器断电与恢复、Wi-Fi 库非阻塞行为、实际 IP 输出、密码不进入驱动日志以及无线洪泛下的按键响应，均待工具链和硬件联调。ESP-011 保持进行中，ESP-008 主循环依赖不解除。

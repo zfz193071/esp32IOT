@@ -17,21 +17,23 @@ CLI 归档及核心归档的 SHA-256 固定在配置中。脚本从 Arduino 官�
 ```sh
 node firmware/tools/setup-arduino.mjs
 node firmware/tools/build-arduino.mjs
-# 独立串口诊断（只编译，不装配业务模块）：
+# 独立串口诊断（只编译）：
 node firmware/tools/build-arduino.mjs --sketch SerialBringup
+node firmware/tools/build-arduino.mjs --sketch WiFiBringup
+node firmware/tools/build-arduino.mjs --sketch ConfigBringup
 ```
 
-安装入口会下载／安装依赖；构建入口不安装或升级工具。无参数或 `--sketch CompileCheck` 构建业务集成检查；`--sketch SerialBringup` 仅复制独立串口程序，输入清单的生产源码列表为空、网页清单为 null。其他入口名会被拒绝。两种入口均为参考目标，无串口探测或上传。CLI 或已安装核心版本不匹配时构建拒绝继续，先按提示修复隔离安装。不要并发运行多个安装过程。
+安装入口会下载／安装依赖；构建入口不安装或升级工具。无参数或 `--sketch CompileCheck` 构建业务集成检查；三个 Bringup 入口分别暂存诊断程序及其必要源码。WiFiBringup 在隔离装配目录中把 `config/wifi.example.h` 复制为 `config/wifi.local.h`，仅使用占位凭据，不读取本机私有凭据；ConfigBringup 编译 NVS 读写代码但不会运行它。输入清单记录暂存源码和示例凭据的摘要。其他入口名会被拒绝。所有入口均为参考目标，无串口探测或上传。CLI 或已安装核心版本不匹配时构建拒绝继续，先按提示修复隔离安装。不要并发运行多个安装过程。
 
 每次构建在 `firmware/build/arduino-check/build-*/` 创建新的装配目录，包括：
 
 - `libraries/Esp32Fan/`：从生产 `firmware/src` 复制的 `.h`／`.cpp`，按 Arduino 库的 src 递归编译方式组织。
 - 库内 `WebAssets.*` 与 `web-manifest.json`：重新生成的五个网页资源，生成失败则构建停止。
-- `CompileCheck/CompileCheck.ino`：仅用于链接验证的入口。
+- 选定的诊断或集成程序：用于链接验证的入口；WiFiBringup／ConfigBringup 所需的 `src/` 仅暂存指定文件，WiFiBringup 另有占位 `config/wifi.local.h`。
 - `build-inputs.json`：版本、源码摘要、入口摘要及网页清单。
 - `output/`：真实交叉编译器输出；构建成功后才写 `build-result.json`，记录参考目标和 `.bin` 摘要。
 
-不复制主机测试桩或 `wifi.local.h`，不读取实际 Wi-Fi 密码。每次装配使用新目录，失败产物保留供排查；未输出 PASS 不能记为编译成功。固定版本和输入清单支持复现构建过程，不保证不同路径／时间下二进制逐字节相同。
+不复制主机测试桩或仓库外的实际 `wifi.local.h`，不读取实际 Wi-Fi 密码。每次装配使用新目录，失败产物保留供排查；未输出 PASS 不能记为编译成功。固定版本和输入清单支持复现构建过程，不保证不同路径／时间下二进制逐字节相同。
 
 ## 编译入口的运行边界
 
@@ -47,6 +49,8 @@ CompileCheck 连接真实 AppLoop、NVS 配置层、ArduinoNetworkPort、Network
 - [Espressif GitHub 归档镜像](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/tools/idf-tools.html#github-assets-mirror)：官方镜像地址与 URL 改写规则。
 
 ## 验证记录
+
+2026-11-01，新增 WiFiBringup／ConfigBringup 纯编译入口，在 macOS x86_64、Arduino CLI 1.5.1、Arduino-ESP32 3.3.3、通用 `esp32:esp32:esp32` 目标下分别编译／链接通过。WiFiBringup 程序 886,827 字节、静态全局 43,424 字节，目录 `firmware/build/arduino-check/build-5UileL/`；ConfigBringup 程序 287,319 字节、静态全局 20,832 字节，目录 `firmware/build/arduino-check/build-1W3KLm/`。构建输入清单分别记录 4／6 个暂存源码和 Wi-Fi 示例凭据摘要。未使用真实凭据、连接串口、执行 NVS 写入或烧录。
 
 2026-11-01 启动标识更新：参考构建装配 23 个生产 C++ 文件并通过编译／链接。程序 1,200,523 字节、静态全局数据 50,140 字节；目录 `firmware/build/arduino-check/build-smRAEn/`，二进制 SHA-256 为 `b46cc2687ea55eae82bf28f3511a9167458940caf76011fd3f89344c16472ee7`。ELF 确认 `esp32BootId`、`bootloader_random_enable/disable` 和 `esp_fill_random` 已链接。主机 23 个 C++ 程序、26 项 Node 测试通过；实际重启、熵源时序仍未验证。
 

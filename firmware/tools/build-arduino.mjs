@@ -1,13 +1,21 @@
 import { mkdir, mkdtemp, readdir, readFile, writeFile, copyFile, stat } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { join, relative, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { firmware, lock, configure, arduino, verifyCli, run, sha256 } from './arduino-environment.mjs';
 
 async function main() {
   const args = process.argv.slice(2);
+  const diagnosticSources = {
+    WiFiBringup: ['board/ArduinoNetworkPort.h', 'board/ArduinoNetworkPort.cpp',
+      'services/NetworkService.h', 'services/NetworkService.cpp'],
+    ConfigBringup: ['board/NvsConfigPersistence.h', 'board/NvsConfigPersistence.cpp',
+      'config/ConfigStore.h', 'config/ConfigStore.cpp',
+      'config/ConfigRecordCodec.h', 'config/ConfigRecordCodec.cpp'],
+  };
+  const sketchNames = ['CompileCheck', 'SerialBringup', ...Object.keys(diagnosticSources)];
   const sketchName = args.length === 0 ? 'CompileCheck' :
-    args.length === 2 && args[0] === '--sketch' && ['CompileCheck', 'SerialBringup'].includes(args[1]) ? args[1] : null;
-  if (!sketchName) throw new Error('Usage: node firmware/tools/build-arduino.mjs [--sketch CompileCheck|SerialBringup]');
+    args.length === 2 && args[0] === '--sketch' && sketchNames.includes(args[1]) ? args[1] : null;
+  if (!sketchName) throw new Error(`Usage: node firmware/tools/build-arduino.mjs [--sketch ${sketchNames.join('|')}]`);
   const integration = sketchName === 'CompileCheck';
   await configure();
   const cliVersion = await verifyCli();
@@ -53,10 +61,30 @@ async function main() {
       'board/Esp32SerialSink.h',
       'board/Esp32BootId.h',
     ].map((header) => `#include "${header}"\n`).join(''));
+  } else if (diagnosticSources[sketchName]) {
+    // Preserve the sketch's ../../src includes, outside the sketch directory.
+    // Only listed sources are staged; no local credential file is read.
+    for (const name of diagnosticSources[sketchName]) {
+      const source = join(firmware, 'src', name);
+      const target = join(stage, 'src', name);
+      await mkdir(dirname(target), { recursive: true });
+      const bytes = await readFile(source);
+      await writeFile(target, bytes);
+      manifest.push({ source: relative(firmware, source), sha256: createHash('sha256').update(bytes).digest('hex') });
+    }
   }
   await copyFile(join(firmware, 'arduino', sketchName, `${sketchName}.ino`), join(sketch, `${sketchName}.ino`));
+  let credentialFixture = null;
+  if (sketchName === 'WiFiBringup') {
+    const example = join(firmware, 'config/wifi.example.h');
+    const bytes = await readFile(example);
+    await mkdir(join(stage, 'config'), { recursive: true });
+    await writeFile(join(stage, 'config/wifi.local.h'), bytes);
+    credentialFixture = { source: 'config/wifi.example.h', sha256: createHash('sha256').update(bytes).digest('hex') };
+  }
   const metadata = {
     purpose: lock.purpose, lock, cli: cliVersion, platform: core, sketchName, sources: manifest,
+    credentialFixture,
     sketchSha256: await sha256(join(sketch, `${sketchName}.ino`)),
     webAssets: integration ? JSON.parse(await readFile(join(sources, 'web-manifest.json'), 'utf8')) : null,
   };

@@ -67,7 +67,7 @@ CRC 使用反射多项式 `0xEDB88320`，初值和最终异或均为 `0xFFFFFFFF
 - 保存先编码，再以 `NVS_READWRITE` 打开并执行 `nvs_set_blob` 和 `nvs_commit`；只有两者均成功才返回 `Saved`。编码／打开失败尚未写目标记录，返回 `Failed`。任何 set／commit 报错保守返回 `Unknown`，不补写或尝试回滚；适配器自身也锁住后续读写，直到重启重建实例。
 - 依据 [ESP-IDF 5.5 NVS 文档](https://docs.espressif.com/projects/esp-idf/en/v5.5/esp32/api-reference/storage/nvs_flash.html)，`ESP_ERR_NVS_REMOVE_FAILED` 可能在新值已写入后返回，并在重新初始化时完成更新。[实现源码](https://github.com/espressif/esp-idf/blob/v5.5/components/nvs_flash/src/nvs_handle_simple.cpp)也表明 set 会进入存储写入，不能把关闭句柄当作事务回滚。主机故障注入覆盖旧／新记录两种结果，不等于实际断电证明。
 
-`firmware/arduino/ConfigBringup/ConfigBringup.ino` 提供串口独立实验，波特率 115200，不配置电机 GPIO，不在启动时写阈值。实物板型、工具链及串口确认后，打开此程序编译上传：`p` 查看当前阈值，`s` 显式保存 35.5／32.25℃，`d` 显式保存 30／28℃。保存确认后手动重启，检查启动加载结果和阈值；未知结果时保存保持暂停，重启后以实际读取值为准。`d` 不擦除分区，相同值不重复写入。本程序尚未经过目标工具链编译或烧录。
+`firmware/arduino/ConfigBringup/ConfigBringup.ino` 提供串口独立实验，波特率 115200，不配置电机 GPIO，不在启动时写阈值。已可运行 `node firmware/tools/build-arduino.mjs --sketch ConfigBringup` 完成通用目标纯编译；不会打开串口、写入 NVS 或上传。实物板型及串口确认后，打开此程序编译上传：`p` 查看当前阈值，`s` 显式保存 35.5／32.25℃，`d` 显式保存 30／28℃。保存确认后手动重启，检查启动加载结果和阈值；未知结果时保存保持暂停，重启后以实际读取值为准。`d` 不擦除分区，相同值不重复写入。尚未按实物板型编译或烧录。
 
 Arduino 核心启动行为需随最终工具链核对：[Arduino-ESP32 3.3.3 的 `initArduino()`](https://github.com/espressif/arduino-esp32/blob/3.3.3/cores/esp32/esp32-hal-misc.c)会初始化默认 NVS，并在无空闲页或格式版本不支持时擦除重建分区。这是核心启动逻辑，发生于本适配器之前，因此不能把“适配器不擦除”理解成所有启动异常均保留旧记录。最终设备验收须记录核心版本和初始化日志。
 
