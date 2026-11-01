@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFile, rm } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { captureInspectionProcess, inspectionSucceeded } from '../tools/inspection-process.mjs';
+import { compareSerialPorts } from '../tools/inspection-ports.mjs';
 
 const firmware = fileURLToPath(new URL('../', import.meta.url));
 const cli = join(firmware, 'tools/inspect-board.mjs');
@@ -71,7 +72,8 @@ test('timeout kills the owned group when launcher and child ignore termination',
 });
 
 test('CLI rejects command injection and dry-run never needs a real port', () => {
-  for (const args of [[], ['erase-flash'], ['--port','@file'], ['--port','/tmp/device'],
+  for (const args of [[], ['erase-flash'], ['--snapshot','extra'], ['--compare'],
+    ['--port','@file'], ['--port','/tmp/device'],
     ['--port','/dev/cu.fake','--after','hard-reset'], ['--list','write-flash']]) {
     const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
     assert.equal(result.status, 1);
@@ -86,6 +88,45 @@ test('CLI rejects command injection and dry-run never needs a real port', () => 
   assert.ok(plan.args.includes('--no-stub'));
   assert.equal(plan.args[plan.args.indexOf('--before')+1], 'no-reset');
   assert.equal(plan.args[plan.args.indexOf('--after')+1], 'no-reset');
+});
+
+test('serial port comparison reports only changes, without guessing a board', () => {
+  const snapshot = { kind: 'serial-port-snapshot', schemaVersion: 1,
+    capturedAt: '2026-11-01T00:00:00.000Z',
+    ports: ['/dev/cu.Bluetooth-Incoming-Port', '/dev/cu.old-board'] };
+  assert.deepEqual(compareSerialPorts(snapshot,
+    ['/dev/cu.Bluetooth-Incoming-Port', '/dev/cu.new-board', '/dev/cu.second-board']), {
+    addedPorts: ['/dev/cu.new-board', '/dev/cu.second-board'],
+    removedPorts: ['/dev/cu.old-board'],
+  });
+  for (const bad of [null, {}, { ...snapshot, schemaVersion: 2 },
+    { ...snapshot, ports: ['/tmp/not-a-port'] },
+    { ...snapshot, ports: ['/dev/cu.duplicate', '/dev/cu.duplicate'] }])
+    assert.throws(() => compareSerialPorts(bad, []), /Invalid serial port snapshot/);
+});
+
+test('CLI saves and compares a port snapshot without opening a device', async () => {
+  const saved = spawnSync(process.execPath, [cli, '--snapshot'], { encoding: 'utf8' });
+  assert.equal(saved.status, 0);
+  const output = JSON.parse(saved.stdout);
+  assert.ok(output.path.startsWith(join(firmware, 'build/board-inspection/ports-')));
+  try {
+    const snapshot = JSON.parse(await readFile(output.path, 'utf8'));
+    assert.equal(snapshot.kind, 'serial-port-snapshot');
+    assert.equal(snapshot.schemaVersion, 1);
+    assert.deepEqual(snapshot.ports, output.ports);
+    const compared = spawnSync(process.execPath, [cli, '--compare', output.path], { encoding: 'utf8' });
+    assert.equal(compared.status, 0);
+    const change = JSON.parse(compared.stdout);
+    assert.equal(change.snapshot, output.path);
+    assert.ok(Array.isArray(change.addedPorts) && Array.isArray(change.removedPorts));
+    assert.match(change.note, /No port opened/);
+    const invalid = join(dirname(output.path), 'invalid.json');
+    await writeFile(invalid, JSON.stringify({ ...snapshot, ports: ['/tmp/not-a-port'] }));
+    const rejected = spawnSync(process.execPath, [cli, '--compare', invalid], { encoding: 'utf8' });
+    assert.equal(rejected.status, 1);
+    assert.match(rejected.stderr, /Invalid serial port snapshot/);
+  } finally { await rm(dirname(output.path), { recursive: true, force: true }); }
 });
 
 test('already cancelled inspection does not launch a process', async () => {

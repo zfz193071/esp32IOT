@@ -12,7 +12,15 @@
 node firmware/tools/inspect-board.mjs --list
 ```
 
-USB 数据线应插到**核心板的 USB-C**。操作前电机和其他外接负载断开；板上现有程序及复位阶段输出未知。连接前后对比列表选出新端口，蓝牙串口不是 ESP32 的证据。CH340C 丝印也不等于电脑已正确枚举；没有新增端口时先检查数据线、接口与系统 USB 设备，不自动安装驱动。
+为辨认新接入的串口，在连接前保存一次设备名快照；命令会打印 `path`，供第二步使用：
+
+```sh
+node firmware/tools/inspect-board.mjs --snapshot
+# 接入一块核心板后，把上一步输出的 path 填到下方
+node firmware/tools/inspect-board.mjs --compare /ABSOLUTE/PATH/TO/snapshot.json
+```
+
+快照位于被忽略的 `firmware/build/board-inspection/ports-*/snapshot.json`，只包含时间和设备名。`--compare` 报告 `addedPorts`／`removedPorts`，不打开串口，不自动认定新增端口就是 ESP32。若同时接入多块板，结果可能有多个候选；逐块接入更容易定位。USB 数据线应插到**核心板的 USB-C**。操作前电机和其他外接负载断开；板上现有程序及复位阶段输出未知。蓝牙串口不是 ESP32 的证据。CH340C 丝印也不等于电脑已正确枚举；没有新增端口时先检查数据线、接口与系统 USB 设备，不自动安装驱动。
 
 将下面占位端口换成实际新增端口，预览完整参数：
 

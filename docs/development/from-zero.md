@@ -40,7 +40,7 @@ node firmware/tools/build-arduino.mjs --sketch ConfigBringup
 
 首次安装需联网并预留数 GB；安装与编译输入均位于被忽略的 `firmware/build/`。无参数入口重新生成网页并编译全部生产模块；三个诊断入口分别检查启动串口、Wi-Fi 和 NVS 程序，其中 Wi-Fi 参考编译只使用仓库示例占位凭据。每次构建输出 PASS 和 `.bin` 路径才算通过；这些产物对应通用 `esp32:esp32:esp32` 参考目标，不能据此选择实际板型或直接烧录。详见[参考编译说明](arduino-reference-build.md)。
 
-已有 USB-C + CH340C 实物证据后，按[板卡识别与串口最小程序](serial-bringup.md)先列出串口，再通过 ROM 读取实际芯片／Flash。容量不必凭金属罩照片推断；读取前必须明确设备端口并按说明进入下载模式。
+已有 USB-C + CH340C 实物证据后，按[板卡识别与串口最小程序](serial-bringup.md)在接入前保存串口快照、接入后比较新增端口，再通过 ROM 读取实际芯片／Flash。容量不必凭金属罩照片推断；读取前必须明确设备端口并按说明进入下载模式。
 
 ## 3. 本机预览手机控制页
 
