@@ -34,6 +34,7 @@ sh firmware/test/run-host-tests.sh --with-preview
 | 回差等号、5000 ms 新鲜度、故障恢复和手动接管 | AutomaticControlTest.cpp | 包括边界两侧与计时回绕 |
 | 严格参数、来源拒绝、保存失败 | WriteApiTest.cpp | 已解析请求，不测 TCP/HTTP 字节解析 |
 | HTTP 分段／分帧、大小预算、超时和写接口串接 | HttpRequestParserTest.cpp | 原始内存字节，不测实际 TCP 和发送耗时 |
+| HTTP 单连接、静态资源、短写、超时及主循环接入 | HttpApiPortTest.cpp | 真实生成网页与 AppLoop，模拟传输端口；不测 TCP 或板端 I/O 耗时 |
 | 非阻塞采集调度、超时与恢复 | TemperatureServiceTest.cpp | 模拟采集，不测真实驱动耗时 |
 | 连接超时、重试节奏、断网继续控制 | NetworkServiceTest.cpp | 模拟无线端口 |
 | 红外精确映射、重复帧、过期及乱序 | InfraredInputTest.cpp | 合成编码，不测真实遥控协议 |
@@ -64,6 +65,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-11-01，新增 HttpApiPort 后执行 `sh firmware/test/run-host-tests.sh`，退出 0：19 个 C++ 测试程序、26 项 Node 测试全部通过。新增连接测试以关闭异常／RTTI 的 C++11 严格告警构建，使用真实生成资源及 AppLoop，覆盖全部资源短写后的字节一致性、HEAD／路由／响应头、接收与响应期限和时钟回绕、收发失败、响应所有权与上限、网络关闭清理、慢读者期间按键接管，以及流水线命令不执行。首次测试漏掉按键启动释放消抖阶段，补齐测试时序后整套通过；控制规则未改。默认跳过 Node 模拟 HTTP；本轮没有真实 TCP、ESP32 工具链或设备验证。
 
 2026-10-30，新增 HttpRequestParser 后执行 `sh firmware/test/run-host-tests.sh`，退出 0：18 个 C++ 测试程序、26 项 Node 测试全部通过。新增验证全部双片切分位置、逐字节输入、逐位置截断、重复／歧义头、长度溢出、精确容量边界、固定接收预算、总期限与时钟回绕、流水线尾部不交付，以及原始开关／配置请求经真实 WriteApi 的处理。默认入口跳过模拟 HTTP 测试；本轮未改 Node 模拟器或网页，未进行实际 TCP 或设备验证。
 
