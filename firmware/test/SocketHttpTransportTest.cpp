@@ -202,6 +202,55 @@ static void httpIntegration() {
     check(server.http.listening() && server.transport.port() != 0, "same-IP reconnect automatically reopens listener");
     check(server.exchange(get("/api/v1/state")).find("HTTP/1.1 200") == 0, "HTTP works after listener restart");
 }
+static void disconnectDuringWrite() {
+    for (bool complete : {false, true}) {
+        Server server;
+        Client oldClient(server.transport.port());
+        const auto request = put(true);
+        const auto size = request.size() - (complete ? 0 : 1);
+        check(sendBytes(oldClient.fd, request.data(), size) == static_cast<long>(size),
+              "queue small write request before simulated link loss");
+        // For a complete request, stop immediately after application: no sending step yet.
+        for (unsigned step = 0; step < 30 && !server.output.fan; ++step) {
+            server.step();
+            yieldNetwork();
+        }
+        check(server.output.fan == complete && server.output.writes == (complete ? 1u : 0u),
+              "only a complete write may apply before link loss");
+        server.radio.link = NetworkLink::Disconnected;
+        server.step();
+        check(!server.http.listening() && server.transport.port() == 0 && server.output.fan == complete,
+              "link loss retires HTTP without reverting an applied output");
+        bool closed = false;
+        for (unsigned attempt = 0; attempt < 2000; ++attempt) {
+            char bytes[256];
+            const auto count = ::recv(oldClient.fd, bytes, sizeof(bytes), 0);
+            check(count <= 0, "no success response escapes after link loss before send");
+            if (count == 0 || (count < 0 && errno == ECONNRESET)) { closed = true; break; }
+            check(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR,
+                  "old connection closes or reports reset");
+            yieldNetwork();
+        }
+        check(closed, "old connection is retired within wall-clock deadline");
+        server.time += 5000;
+        server.radio.link = NetworkLink::Connected;
+        server.step();
+        check(server.http.listening(), "listener recovers after interrupted write");
+        const auto snapshot = server.exchange(get("/api/v1/state"));
+        check(snapshot.find("HTTP/1.1 200 OK\r\n") == 0 && body(snapshot).find(
+                  complete ? "\"fanOutputOn\":true" : "\"fanOutputOn\":false") != std::string::npos,
+              "new connection can query the actual outcome of interrupted write");
+        check(server.output.writes == (complete ? 1u : 0u),
+              "reconnection and outcome query never replay the previous command");
+        // A newly issued opposite command proves parser/request state is fresh.
+        const auto fresh = server.exchange(put(!complete));
+        check(fresh.find("HTTP/1.1 200 OK\r\n") == 0 && server.output.fan == !complete &&
+                  server.output.writes == (complete ? 2u : 1u),
+              "fresh write after reconnect works without an old request prefix");
+    }
+    std::cout << "PASS: interrupted TCP writes preserve actual outcome without replay after reconnect\n";
+}
+
 static void repeatedHttpPressure() {
     PressureSensor sensor;
     TemperatureService temperature(sensor, pressureTiming());
@@ -270,6 +319,6 @@ static void transportLifecycle() {
     check(transport.begin("127.0.0.1", 0), "listener restarts only after retired handles are reclaimed");
 }
 int main() {
-    transportLifecycle(); httpIntegration(); repeatedHttpPressure();
+    transportLifecycle(); httpIntegration(); repeatedHttpPressure(); disconnectDuringWrite();
     std::cout << "PASS: real loopback TCP transport, embedded assets, API, local control and listener lifecycle (host only)\n";
 }
