@@ -71,8 +71,9 @@ static std::string put(bool on, const char* origin = "http://fan.test") {
 }
 struct Output : OutputPort {
     bool fan = true;
+    unsigned writes = 0;
     void initializeOff() override { fan = false; }
-    void setFan(bool on) override { fan = on; }
+    void setFan(bool on) override { fan = on; ++writes; }
     void setIndicator(bool) override {}
 };
 struct Storage : ConfigPersistence {
@@ -93,6 +94,23 @@ struct Radio : NetworkPort {
     std::string address() override { return "127.0.0.1"; }
     void disconnect() override { link = NetworkLink::Disconnected; }
 };
+struct PressureSensor : TemperaturePort {
+    unsigned starts = 0, polls = 0, failures = 0, samples = 0;
+    bool start() override { ++starts; return true; }
+    TemperaturePoll poll(double& value) override {
+        ++polls;
+        if (polls % 7 == 0) { ++failures; return TemperaturePoll::Invalid; }
+        ++samples;
+        value = 25;
+        return TemperaturePoll::Ready;
+    }
+    void cancel() override { check(false, "prompt pressure sensor must not time out"); }
+};
+static TemperatureTiming pressureTiming() {
+    TemperatureTiming timing;
+    timing.intervalMs = 10; timing.timeoutMs = 10;
+    return timing; // Accelerated simulated timing, not device configuration.
+}
 struct Server {
     Closer closer;
     SocketHttpTransport transport{closer};
@@ -103,14 +121,19 @@ struct Server {
     Storage disk;
     ConfigStore store{disk};
     Log log;
-    AppLoop app{"tcp-test", store, output, log, 20, nullptr, &network, &http, policy()};
+    AppLoop app;
+    bool pressureInputs = false;
     std::uint32_t time = 0;
-    Server() {
+    Server(TemperatureService* temperature = nullptr)
+        : app("tcp-test", store, output, log, 20, temperature, &network, &http, policy()) {
         app.start();
         step();
         check(http.listening() && transport.port() != 0, "network-managed ephemeral loopback listener (requires local networking permission)");
     }
-    void step(bool pressed = false) { app.step(time++, pressed); }
+    void step(bool pressed = false) {
+        if (pressureInputs) pressed = time % 100 >= 30 && time % 100 < 60;
+        app.step(time++, pressed);
+    }
     std::string exchange(const std::string& request, std::size_t fragment = 7, bool halfClose = false) {
         Client client(transport.port());
         std::size_t offset = 0;
@@ -179,6 +202,39 @@ static void httpIntegration() {
     check(server.http.listening() && server.transport.port() != 0, "same-IP reconnect automatically reopens listener");
     check(server.exchange(get("/api/v1/state")).find("HTTP/1.1 200") == 0, "HTTP works after listener restart");
 }
+static void repeatedHttpPressure() {
+    PressureSensor sensor;
+    TemperatureService temperature(sensor, pressureTiming());
+    Server loaded(&temperature);
+    loaded.pressureInputs = true;
+    for (unsigned request = 0; request < 100; ++request) {
+        // Alternate bytewise and larger fragments; each request opens a new TCP connection.
+        const auto response = loaded.exchange(get("/api/v1/state"), request % 2 ? 7 : 1);
+        check(response.find("HTTP/1.1 200 OK\r\n") == 0 &&
+              body(response).find("\"bootId\":\"tcp-test\"") != std::string::npos,
+              "100 consecutive TCP requests return complete state responses");
+    }
+    check(loaded.output.writes >= 20 && sensor.failures > 0 && sensor.samples > 0,
+          "TCP pressure overlaps at least 20 button events and sensor failure/recovery");
+
+    // Replay exactly the same simulated input/time sequence without HTTP clients.
+    PressureSensor baselineSensor;
+    TemperatureService baselineTemperature(baselineSensor, pressureTiming());
+    Server baseline(&baselineTemperature);
+    baseline.pressureInputs = true;
+    while (baseline.time < loaded.time) baseline.step();
+    const auto actual = loaded.app.snapshot();
+    const auto expected = baseline.app.snapshot();
+    check(loaded.output.writes == baseline.output.writes && loaded.output.fan == baseline.output.fan &&
+          actual.lastCommandSource == CommandSource::Button && actual.revision == expected.revision,
+          "HTTP reads neither add output changes nor suppress local button commands");
+    check(sensor.starts == baselineSensor.starts && sensor.polls == baselineSensor.polls &&
+          sensor.failures == baselineSensor.failures && sensor.samples == baselineSensor.samples &&
+          actual.sensorStatus == expected.sensorStatus && actual.sampleAgeMs == expected.sampleAgeMs,
+          "sampling and recovery match idle baseline at identical simulated times");
+    std::cout << "PASS: 100 real TCP state requests preserve button and sampling progress (simulated inputs/time)\n";
+}
+
 static void transportLifecycle() {
     Closer closer; SocketHttpTransport transport(closer);
     check(!transport.begin("0.0.0.0", 0) && !transport.begin("localhost", 0) &&
@@ -214,6 +270,6 @@ static void transportLifecycle() {
     check(transport.begin("127.0.0.1", 0), "listener restarts only after retired handles are reclaimed");
 }
 int main() {
-    transportLifecycle(); httpIntegration();
+    transportLifecycle(); httpIntegration(); repeatedHttpPressure();
     std::cout << "PASS: real loopback TCP transport, embedded assets, API, local control and listener lifecycle (host only)\n";
 }

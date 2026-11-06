@@ -49,7 +49,7 @@ sh firmware/test/run-host-tests.sh --with-sockets
 | HTTP 单连接、静态资源、短写、超时及主循环接入 | HttpApiPortTest.cpp | 真实生成网页与 AppLoop，模拟传输端口；不测 TCP 或板端 I/O 耗时 |
 | HTTP 断网／换地址清理、重连、监听重试与同轮网络观察 | NetworkHttpApiTest.cpp | 真实 NetworkService／AppLoop、模拟监听器；不测真实无线连接 |
 | ESP32 独立关闭任务、队列上限、申请失败及错误锁定 | Esp32SocketCloserTest.cpp | 默认运行；主机线程／FreeRTOS 桩，不测目标 SDK 时序 |
-| 真实 TCP 监听、分段读写、资源与 API、连接释放和重开 | SocketHttpTransportTest.cpp | 可选；真实回环 socket、AppLoop 和生成网页，不是 Wi-Fi 实物测试 |
+| 真实 TCP 监听、分段读写、资源与 API、连接释放和重开、100 次连续状态查询 | SocketHttpTransportTest.cpp | 可选；真实回环 socket、AppLoop 和生成网页，不是 Wi-Fi 实物测试 |
 | 非阻塞采集调度、超时与恢复 | TemperatureServiceTest.cpp | 模拟采集，不测真实驱动耗时 |
 | 连接超时、重试节奏、断网继续控制 | NetworkServiceTest.cpp | 模拟无线端口 |
 | 红外精确映射、重复帧、过期及乱序 | InfraredInputTest.cpp | 合成编码，不测真实遥控协议 |
@@ -82,6 +82,8 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-11-06，新增真实回环 TCP 的 100 次连续状态请求和无客户端基线对照；`sh firmware/test/run-socket-tests.sh` 退出 0，按键与采集进度比较及原有 TCP 联合场景全部通过。首次沙箱内监听被拒绝（errno 1），经授权在允许回环监听的环境中重跑通过。本轮只修改可选 socket 测试与说明，默认主机套件未重复执行；硬件验收未执行。
 
 2026-11-06，新增按键／LED 独立实验后，默认主机回归退出 0：24 个 C++ 测试程序及 37 项 Node 测试通过；ButtonLedBringup 通用 ESP32 参考目标编译／链接通过。可选模拟 HTTP／回环 TCP 未重跑，未执行烧录或实物实验。
 
