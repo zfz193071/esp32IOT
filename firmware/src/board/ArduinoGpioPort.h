@@ -1,6 +1,6 @@
 #pragma once
 
-#include "board/BoardIoAdapter.h"
+#include "GpioPort.h"
 
 namespace esp32fan {
 

@@ -12,6 +12,21 @@ bool bootStrapGpio(int gpio) {
 }
 } // namespace
 
+ProfileError validateButtonLedProfile(const BoardProfile& profile) {
+    if (profile.buttonGpio == -1 || profile.statusLedGpio == -1)
+        return ProfileError::MissingSignal;
+    if (!usableGpio(profile.buttonGpio) || !usableGpio(profile.statusLedGpio))
+        return ProfileError::InvalidGpio;
+    if (inputOnlyGpio(profile.statusLedGpio))
+        return ProfileError::OutputOnInputOnlyGpio;
+    // The experiment uses an internal pull-up for active-low buttons.
+    if (profile.buttonActiveLow && inputOnlyGpio(profile.buttonGpio))
+        return ProfileError::InvalidGpio;
+    if (profile.buttonGpio == profile.statusLedGpio)
+        return ProfileError::GpioConflict;
+    return ProfileError::None;
+}
+
 ProfileError validateBoardProfile(const BoardProfile& profile) {
     const int pins[] = {profile.fanEnableGpio, profile.buttonGpio, profile.statusLedGpio,
                         profile.infraredGpio, profile.temperatureGpio};

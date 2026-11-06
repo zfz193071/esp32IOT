@@ -18,12 +18,13 @@ CLI 归档及核心归档的 SHA-256 固定在配置中。脚本从 Arduino 官�
 node firmware/tools/setup-arduino.mjs
 node firmware/tools/build-arduino.mjs
 # 独立串口诊断（只编译）：
+node firmware/tools/build-arduino.mjs --sketch ButtonLedBringup
 node firmware/tools/build-arduino.mjs --sketch SerialBringup
 node firmware/tools/build-arduino.mjs --sketch WiFiBringup
 node firmware/tools/build-arduino.mjs --sketch ConfigBringup
 ```
 
-安装入口会下载／安装依赖；构建入口不安装或升级工具。无参数或 `--sketch CompileCheck` 构建业务集成检查；三个 Bringup 入口分别暂存诊断程序及其必要源码。WiFiBringup 在隔离装配目录中把 `config/wifi.example.h` 复制为 `config/wifi.local.h`，仅使用占位凭据，不读取本机私有凭据；ConfigBringup 编译 NVS 读写代码但不会运行它。输入清单记录暂存源码和示例凭据的摘要。其他入口名会被拒绝。所有入口均为参考目标，无串口探测或上传。CLI 或已安装核心版本不匹配时构建拒绝继续，先按提示修复隔离安装。不要并发运行多个安装过程。
+安装入口会下载／安装依赖；构建入口不安装或升级工具。无参数或 `--sketch CompileCheck` 构建业务集成检查；四个 Bringup 入口分别暂存诊断程序及其必要源码。WiFiBringup 在隔离装配目录中把 `config/wifi.example.h` 复制为 `config/wifi.local.h`，仅使用占位凭据，不读取本机私有凭据；ConfigBringup 编译 NVS 读写代码但不会运行它。输入清单记录暂存源码和示例凭据的摘要。其他入口名会被拒绝。ButtonLedBringup 暂存 GPIO 接口、按键消抖和独立实验模块，默认引脚未分配，不使用 Wi-Fi 配置。所有入口均为参考目标，无串口探测或上传。CLI 或已安装核心版本不匹配时构建拒绝继续，先按提示修复隔离安装。不要并发运行多个安装过程。
 
 每次构建在 `firmware/build/arduino-check/build-*/` 创建新的装配目录，包括：
 
@@ -49,6 +50,8 @@ CompileCheck 连接真实 AppLoop、NVS 配置层、ArduinoNetworkPort、Network
 - [Espressif GitHub 归档镜像](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/tools/idf-tools.html#github-assets-mirror)：官方镜像地址与 URL 改写规则。
 
 ## 验证记录
+
+2026-11-06，新增 ButtonLedBringup 独立编译入口，Arduino CLI 1.5.1／Arduino-ESP32 3.3.3 通用参考目标编译／链接通过。程序 283,031 字节，静态全局 20,840 字节；目录 `firmware/build/arduino-check/build-IarsZe/`，二进制 SHA-256 为 `dce3c06d658dbbf621a1db6222a052ea6339033f426c75fdec4e8887151b48da`。暂存 9 个源码／头文件，默认引脚未分配；未烧录或操作 GPIO。
 
 2026-11-01，新增 WiFiBringup／ConfigBringup 纯编译入口，在 macOS x86_64、Arduino CLI 1.5.1、Arduino-ESP32 3.3.3、通用 `esp32:esp32:esp32` 目标下分别编译／链接通过。WiFiBringup 程序 886,827 字节、静态全局 43,424 字节，目录 `firmware/build/arduino-check/build-5UileL/`；ConfigBringup 程序 287,319 字节、静态全局 20,832 字节，目录 `firmware/build/arduino-check/build-1W3KLm/`。构建输入清单分别记录 4／6 个暂存源码和 Wi-Fi 示例凭据摘要。未使用真实凭据、连接串口、执行 NVS 写入或烧录。
 

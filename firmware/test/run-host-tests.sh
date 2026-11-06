@@ -43,6 +43,15 @@ trap 'rm -rf "$build_dir"' EXIT HUP INT TERM
 "$build_dir/board-io-adapter-test"
 
 "${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
+    -I "$firmware_dir/src" \
+    "$firmware_dir/src/board/BoardProfile.cpp" \
+    "$firmware_dir/src/board/ButtonLedExperiment.cpp" \
+    "$firmware_dir/src/input/ButtonDebouncer.cpp" \
+    "$firmware_dir/test/ButtonLedExperimentTest.cpp" \
+    -o "$build_dir/button-led-experiment-test"
+"$build_dir/button-led-experiment-test"
+
+"${CXX:-c++}" -std=c++11 -Wall -Wextra -Wpedantic -Werror \
     -I "$firmware_dir/test/arduino-stub" -I "$firmware_dir/src" \
     "$firmware_dir/src/board/ArduinoGpioPort.cpp" \
     "$firmware_dir/test/ArduinoGpioPortTest.cpp" \

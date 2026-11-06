@@ -27,6 +27,9 @@ enum class ProfileError {
 
 // Checks a classic ESP32-WROOM-32 candidate before any GPIO is configured.
 // Electrical load, supply, wiring and reset behavior require board validation.
+// Button/LED-only experiment: no fan, infrared or temperature pin is used.
+ProfileError validateButtonLedProfile(const BoardProfile& profile);
+
 ProfileError validateBoardProfile(const BoardProfile& profile);
 
 } // namespace esp32fan

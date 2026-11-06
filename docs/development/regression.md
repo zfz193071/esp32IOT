@@ -38,6 +38,7 @@ sh firmware/test/run-host-tests.sh --with-sockets
 |---|---|---|
 | 默认关闭、命令来源、显式开关和幂等 | FanControllerTest.cpp | 控制状态，不测 GPIO 电平 |
 | 启动随机源顺序、标识编码／缓存与状态 API 契约 | Esp32BootIdTest.cpp | 三次独立进程注入样本；不验证实际熵质量或断电重启 |
+| 独立按键／LED 装配、引脚拒绝、极性、20 次按下及不操作电机 | ButtonLedExperimentTest.cpp | 模拟 GPIO；不代表接线或烧录验收 |
 | 按下消抖、启动按住、长按与计时回绕 | ButtonDebouncerTest.cpp | 归一化按键输入 |
 | 阈值范围、间隔、损坏回退和保存失败 | ConfigStoreTest.cpp | 模拟原子存储，不测断电 Flash |
 | NVS 句柄、固定长度读取及写入／提交未知结果 | NvsConfigPersistenceTest.cpp | 主机桩模拟旧／新值两种恢复，不测真实 Flash |
@@ -81,6 +82,10 @@ AppLoop 的新增组合回归验证：自动开启后红外切换进入手动；
 以上不能从主机测试的通过结果推定完成，ESP-022 仍待前序实物验收和最终固件回归。
 
 ## 本轮结果
+
+2026-11-06，新增按键／LED 独立实验后，默认主机回归退出 0：24 个 C++ 测试程序及 37 项 Node 测试通过；ButtonLedBringup 通用 ESP32 参考目标编译／链接通过。可选模拟 HTTP／回环 TCP 未重跑，未执行烧录或实物实验。
+
+2026-11-06，代码基线 `5fcef3c` 执行 `sh firmware/test/run-host-tests.sh` 退出 0：23 个 C++ 测试程序及 37 项 Node 测试通过。可选模拟 HTTP 与真实回环 TCP 未执行；未重新运行参考目标编译。只读串口枚举仅列出两个蓝牙端口，未打开设备或执行实物验收。
 
 2026-11-01，识别工具增加 `--snapshot` 和 `--compare`，仅用 `/dev` 中的串口名称报告新增／消失端口，不自动选择设备或执行 ROM 读取。11 项识别工具测试及默认入口全部 37 项 Node 测试通过，覆盖多端口变化、无效快照拒绝和命令行完整流程；实际插拔板卡尚未执行。
 

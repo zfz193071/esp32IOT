@@ -1,6 +1,6 @@
 # 按键消抖开发与验证
 
-ESP-005 的硬件无关部分位于 `firmware/src/input/ButtonDebouncer.h` 和 `.cpp`。模块接收已转换为“是否按下”的输入和毫秒时间，每次调用立即返回，稳定按下时仅返回一次事件。GPIO 读取与 LED 驱动待 BoardProfile 确认后接入。
+ESP-005 的硬件无关部分位于 `firmware/src/input/ButtonDebouncer.h` 和 `.cpp`。模块接收已转换为“是否按下”的输入和毫秒时间，每次调用立即返回，稳定按下时仅返回一次事件。独立 `ButtonLedExperiment` 已装配 GPIO 读取与 LED 切换，实物 GPIO 与极性仍待确认。
 
 ## 输入与事件约定
 
@@ -28,8 +28,24 @@ sh firmware/test/run-host-tests.sh
 - 32 位毫秒计数回绕、不均匀采样及零等待参数。
 - 模拟连续按下释放 20 次，每次通过现有控制器恰好切换一次。
 
+## 独立按键／LED 程序
+
+`firmware/arduino/ButtonLedBringup/ButtonLedBringup.ino` 使用 `BoardProfile` 的按键／LED 引脚与有效电平，复用 `ButtonDebouncer`。不构造风扇控制器，不配置或写入电机、红外、温度引脚。`GpioPort` 独立为轻量接口，实验无需包含业务主循环。
+
+只编译通用参考目标：
+
+```sh
+node firmware/tools/build-arduino.mjs --sketch ButtonLedBringup
+```
+
+程序默认把两项引脚设为 `-1`，启动串口 115200 输出 `Button/LED disabled` 与 `ProfileError` 数值，不进行 GPIO 操作。错误值定义见 `firmware/src/board/BoardProfile.h`。确认实际接线后才填写 `experimentProfile()` 的按键、LED 引脚和两项极性；不存在默认接线表。缺失、无效、冲突引脚及仅输入引脚用作 LED 均拒绝；低电平按键要求内部上拉，因此 GPIO34～39 不适用于此配置。高电平按键不启用内部上拉，实际电路必须提供确定的空闲电平。
+
+初始化先设 LED 为关闭电平，再配置按键；重复初始化无副作用。首次稳定释放后，每个有效按下切换一次 LED，串口输出 `Button press; LED ON/OFF`；持续按住不重复输出。20 ms 是暂定软件实验参数，不是实测值。串口输出用于独立实验观察，不承担正式主循环的有界日志契约。
+
+`ButtonLedExperimentTest.cpp` 使用模拟 GPIO 验证默认配置不触碰引脚、配置拒绝、初始化顺序和幂等、正反极性、启动按住、回绕、抖动、20 次按下、3 秒长按以及不操作电机。它已纳入默认主机测试入口。
+
 ## 待完成的实物实验
 
-确认按键与 LED 的 GPIO、有效电平、上下拉及底板跳线后，建立独立实验入口，记录串口事件和 LED 切换次数。实物连续操作 20 次、长按 3 秒、释放后再次按下，并检查重启（包括按住重启）行为。根据观测调整消抖时间并记录依据。
+确认按键与 LED 的 GPIO、有效电平、上下拉及底板跳线后，配置上述独立实验入口，记录串口事件和 LED 切换次数。实物连续操作 20 次、长按 3 秒、释放后再次按下，并检查重启（包括按住重启）行为。根据观测调整消抖时间并记录依据。
 
 ESP-005 仍为进行中：主机规则验证不能替代 BoardProfile、LED 实验、消抖参数测量与烧录验收。

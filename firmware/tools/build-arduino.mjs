@@ -6,6 +6,10 @@ import { firmware, lock, configure, arduino, verifyCli, run, sha256 } from './ar
 async function main() {
   const args = process.argv.slice(2);
   const diagnosticSources = {
+    ButtonLedBringup: ['board/GpioPort.h', 'board/ArduinoGpioPort.h', 'board/ArduinoGpioPort.cpp',
+      'board/BoardProfile.h', 'board/BoardProfile.cpp',
+      'board/ButtonLedExperiment.h', 'board/ButtonLedExperiment.cpp',
+      'input/ButtonDebouncer.h', 'input/ButtonDebouncer.cpp'],
     WiFiBringup: ['board/ArduinoNetworkPort.h', 'board/ArduinoNetworkPort.cpp',
       'services/NetworkService.h', 'services/NetworkService.cpp'],
     ConfigBringup: ['board/NvsConfigPersistence.h', 'board/NvsConfigPersistence.cpp',
